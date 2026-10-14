@@ -1,0 +1,328 @@
+{
+  "note": "static provenance from measured artifacts; Marquez/OpenLineage not deployed (D18)",
+  "nodes": {
+    "tlc_cdn": {
+      "kind": "external_source",
+      "detail": "d37ci6vzurychx.cloudfront.net/trip-data"
+    },
+    "minio_raw": {
+      "kind": "s3_prefix",
+      "detail": "s3://lakehouse/raw/yellow_tripdata_*.parquet (8 files)"
+    },
+    "contract": {
+      "kind": "contract",
+      "detail": "contracts/yellow_trips.v1.yaml"
+    },
+    "quarantine": {
+      "kind": "s3_prefix",
+      "detail": "s3://quarantine/yellow_trips/ (27 objects)"
+    },
+    "spark-ingest-2024-01": {
+      "kind": "spark_job",
+      "detail": {
+        "source_file": "yellow_tripdata_2024-01",
+        "input_rows": 2964624,
+        "valid_rows": 2927000,
+        "quarantined_rows": 37624,
+        "status": "merged",
+        "drift": {
+          "extra_columns": [
+            "RatecodeID",
+            "store_and_fwd_flag",
+            "extra",
+            "mta_tax",
+            "tolls_amount",
+            "improvement_surcharge",
+            "congestion_surcharge",
+            "Airport_fee"
+          ],
+          "renamed_or_case_changed": []
+        }
+      }
+    },
+    "spark-ingest-2024-02": {
+      "kind": "spark_job",
+      "detail": {
+        "source_file": "yellow_tripdata_2024-02",
+        "input_rows": 3007526,
+        "valid_rows": 2966785,
+        "quarantined_rows": 40741,
+        "status": "merged",
+        "drift": {
+          "extra_columns": [
+            "RatecodeID",
+            "store_and_fwd_flag",
+            "extra",
+            "mta_tax",
+            "tolls_amount",
+            "improvement_surcharge",
+            "congestion_surcharge",
+            "Airport_fee"
+          ],
+          "renamed_or_case_changed": []
+        }
+      }
+    },
+    "spark-ingest-2024-03": {
+      "kind": "spark_job",
+      "detail": {
+        "source_file": "yellow_tripdata_2024-03",
+        "input_rows": 3582628,
+        "valid_rows": 3523905,
+        "quarantined_rows": 58723,
+        "status": "merged",
+        "drift": {
+          "extra_columns": [
+            "RatecodeID",
+            "store_and_fwd_flag",
+            "extra",
+            "mta_tax",
+            "tolls_amount",
+            "improvement_surcharge",
+            "congestion_surcharge",
+            "Airport_fee"
+          ],
+          "renamed_or_case_changed": []
+        }
+      }
+    },
+    "spark-ingest-2024-04": {
+      "kind": "spark_job",
+      "detail": {
+        "source_file": "yellow_tripdata_2024-04",
+        "input_rows": 3514289,
+        "valid_rows": 3456486,
+        "quarantined_rows": 57803,
+        "status": "merged",
+        "drift": {
+          "extra_columns": [
+            "RatecodeID",
+            "store_and_fwd_flag",
+            "extra",
+            "mta_tax",
+            "tolls_amount",
+            "improvement_surcharge",
+            "congestion_surcharge",
+            "Airport_fee"
+          ],
+          "renamed_or_case_changed": []
+        }
+      }
+    },
+    "spark-ingest-2024-05": {
+      "kind": "spark_job",
+      "detail": {
+        "source_file": "yellow_tripdata_2024-05",
+        "input_rows": 3723833,
+        "valid_rows": 3663653,
+        "quarantined_rows": 60180,
+        "status": "merged",
+        "drift": {
+          "extra_columns": [
+            "RatecodeID",
+            "store_and_fwd_flag",
+            "extra",
+            "mta_tax",
+            "tolls_amount",
+            "improvement_surcharge",
+            "congestion_surcharge",
+            "Airport_fee"
+          ],
+          "renamed_or_case_changed": []
+        }
+      }
+    },
+    "spark-ingest-2024-06": {
+      "kind": "spark_job",
+      "detail": {
+        "source_file": "yellow_tripdata_2024-06",
+        "input_rows": 3539193,
+        "valid_rows": 3477270,
+        "quarantined_rows": 61923,
+        "status": "merged",
+        "drift": {
+          "extra_columns": [
+            "RatecodeID",
+            "store_and_fwd_flag",
+            "extra",
+            "mta_tax",
+            "tolls_amount",
+            "improvement_surcharge",
+            "congestion_surcharge",
+            "Airport_fee"
+          ],
+          "renamed_or_case_changed": []
+        }
+      }
+    },
+    "nyc.yellow_trips": {
+      "kind": "iceberg_table",
+      "detail": {
+        "rows": 20015099,
+        "snapshots": 1,
+        "files_after_optimize": 2
+      }
+    },
+    "nyc.taxi_zones": {
+      "kind": "iceberg_table",
+      "detail": {
+        "rows": 265
+      }
+    },
+    "trino": {
+      "kind": "query_engine",
+      "detail": "trino 483, 5 demo queries (phase5)"
+    },
+    "gx_suite": {
+      "kind": "quality",
+      "detail": "GX yellow_trips, 7 expectations (phase6)"
+    }
+  },
+  "edges": [
+    {
+      "from": "tlc_cdn",
+      "to": "minio_raw",
+      "via": "scripts/upload-raw.py"
+    },
+    {
+      "from": "minio_raw",
+      "to": "spark-ingest-2024-01",
+      "via": "s3a://lakehouse/raw/yellow_tripdata_2024-01.parquet"
+    },
+    {
+      "from": "contract",
+      "to": "spark-ingest-2024-01",
+      "via": "validation + normalization"
+    },
+    {
+      "from": "spark-ingest-2024-01",
+      "to": "nyc.yellow_trips",
+      "via": "append 2927000 rows"
+    },
+    {
+      "from": "spark-ingest-2024-01",
+      "to": "quarantine",
+      "via": "37624 rows with _quarantine_reason"
+    },
+    {
+      "from": "minio_raw",
+      "to": "spark-ingest-2024-02",
+      "via": "s3a://lakehouse/raw/yellow_tripdata_2024-02.parquet"
+    },
+    {
+      "from": "contract",
+      "to": "spark-ingest-2024-02",
+      "via": "validation + normalization"
+    },
+    {
+      "from": "spark-ingest-2024-02",
+      "to": "nyc.yellow_trips",
+      "via": "append 2966785 rows"
+    },
+    {
+      "from": "spark-ingest-2024-02",
+      "to": "quarantine",
+      "via": "40741 rows with _quarantine_reason"
+    },
+    {
+      "from": "minio_raw",
+      "to": "spark-ingest-2024-03",
+      "via": "s3a://lakehouse/raw/yellow_tripdata_2024-03.parquet"
+    },
+    {
+      "from": "contract",
+      "to": "spark-ingest-2024-03",
+      "via": "validation + normalization"
+    },
+    {
+      "from": "spark-ingest-2024-03",
+      "to": "nyc.yellow_trips",
+      "via": "append 3523905 rows"
+    },
+    {
+      "from": "spark-ingest-2024-03",
+      "to": "quarantine",
+      "via": "58723 rows with _quarantine_reason"
+    },
+    {
+      "from": "minio_raw",
+      "to": "spark-ingest-2024-04",
+      "via": "s3a://lakehouse/raw/yellow_tripdata_2024-04.parquet"
+    },
+    {
+      "from": "contract",
+      "to": "spark-ingest-2024-04",
+      "via": "validation + normalization"
+    },
+    {
+      "from": "spark-ingest-2024-04",
+      "to": "nyc.yellow_trips",
+      "via": "append 3456486 rows"
+    },
+    {
+      "from": "spark-ingest-2024-04",
+      "to": "quarantine",
+      "via": "57803 rows with _quarantine_reason"
+    },
+    {
+      "from": "minio_raw",
+      "to": "spark-ingest-2024-05",
+      "via": "s3a://lakehouse/raw/yellow_tripdata_2024-05.parquet"
+    },
+    {
+      "from": "contract",
+      "to": "spark-ingest-2024-05",
+      "via": "validation + normalization"
+    },
+    {
+      "from": "spark-ingest-2024-05",
+      "to": "nyc.yellow_trips",
+      "via": "append 3663653 rows"
+    },
+    {
+      "from": "spark-ingest-2024-05",
+      "to": "quarantine",
+      "via": "60180 rows with _quarantine_reason"
+    },
+    {
+      "from": "minio_raw",
+      "to": "spark-ingest-2024-06",
+      "via": "s3a://lakehouse/raw/yellow_tripdata_2024-06.parquet"
+    },
+    {
+      "from": "contract",
+      "to": "spark-ingest-2024-06",
+      "via": "validation + normalization"
+    },
+    {
+      "from": "spark-ingest-2024-06",
+      "to": "nyc.yellow_trips",
+      "via": "append 3477270 rows"
+    },
+    {
+      "from": "spark-ingest-2024-06",
+      "to": "quarantine",
+      "via": "61923 rows with _quarantine_reason"
+    },
+    {
+      "from": "nyc.yellow_trips",
+      "to": "trino",
+      "via": "iceberg REST + S3"
+    },
+    {
+      "from": "nyc.taxi_zones",
+      "to": "trino",
+      "via": "join sql/05_zone_names.sql"
+    },
+    {
+      "from": "nyc.yellow_trips",
+      "to": "gx_suite",
+      "via": "200k-row sample: 100% pass"
+    },
+    {
+      "from": "quarantine",
+      "to": "gx_suite",
+      "via": "20k-row negative control: fails as expected"
+    }
+  ]
+}

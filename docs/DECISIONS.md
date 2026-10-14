@@ -159,3 +159,21 @@ by picking the most reasonable option and writing it here.
   clone partitionné par mois (CTAS), CTAS vs INSERT, time travel + rollback.
 - Mesures: médiane sur 5 répétitions + stdev, fichiers/octets via `$files`,
   résultats bruts dans `experiments/phase7_*.json`. Rien d'estimé.
+
+## D18 — Marquez écarté (ressources), provenance statique à la place
+- Context: spec = Marquez SEULEMENT si les ressources le permettent.
+  Mesuré le 14/10 : nœud unique, CPU limits 107 % (overcommit), mémoire limits
+  67 % (~12,2 Gio). Tournent déjà : Argo CD (7 pods), MinIO, Postgres,
+  Lakekeeper, Trino (2 pods ≈ 7 Gio de limites), pods Spark en rafales.
+  Marquez = API + Web + Postgres + listener OpenLineage à re-valider, et une
+  JVM de plus (même famille que le SIGSEGV Spark).
+- État vérifié le 14/10 : upstream `MarquezProject/marquez` 0.50.0 (Java) ;
+  fork `ilum/marquez` 0.54.0 (backend Rust, OpenLineage 2.0.2, moindre
+  empreinte) + chart Helm avec Postgres optionnel.
+- Choice: **pas de Marquez** — « un petit ensemble qui fonctionne vaut mieux
+  qu'un grand ensemble qui plante ». Substituts réels : registre `source_file`
+  (idempotence), snapshots Iceberg avec app-ids (phase5), motifs de
+  quarantaine, + export statique `experiments/phase8_lineage.json` généré
+  depuis ces artefacts mesurés (14 nœuds, 29 arêtes, rien d'inventé).
+- Pour l'ajouter un jour : chart `ilum/marquez` 0.54.0 + `postgresql.enabled`,
+  listener OpenLineage dans l'image spark-runner, +4 Gio de limites min.

@@ -57,3 +57,10 @@ Les résumés de phase sont ajoutés à la suite, au fil de l'eau.
 - **Comment ça marche** : `scripts/bench-iceberg.py` enchaîne les étapes et sauve `experiments/phase7_*.json` ; `$files`/`$snapshots` donnent fichiers et octets ; rowcount final = 20 015 099 (données intactes).
 - **Comment ça s'assemble** : travaille sur la table des phases 4-5 ; expire réglé à 1h (D17) pour purger les 7 snapshots de démo ; les chiffres alimentent le tableau README.
 - **À retenir** : (1) compaction 27→2 fichiers, requête 4,97s→3,49s (médianes) ; (2) partitionnement mois : 3,31s→2,38s ; CTAS 20 M lignes = 106s ; (3) time travel + rollback aller-retour vérifiés par comptages.
+
+## Phase 8 — Lineage : écarté, documenté
+- **Rôle** : tracer d'où viennent les données — sans casser ce qui marche.
+- **Pourquoi ce choix** : nœud à 67 % mémoire / 107 % CPU en limites avec Trino+Spark ; Marquez (même Rust 0.54.0) = 3 charges + re-validation du runner ; la spec autorise l'écart documenté.
+- **Comment ça marche** : `scripts/export-lineage.py` assemble `experiments/phase8_lineage.json` (14 nœuds, 29 arêtes) depuis snapshots, résumés d'ingestion, contrats et quarantaine — que du mesuré.
+- **Comment ça s'assemble** : s'appuie sur le registre `source_file`, les app-ids des snapshots et les motifs de quarantaine des phases précédentes.
+- **À retenir** : (1) petit ensemble qui marche > grand qui plante ; (2) la provenance peut être statique et honnête ; (3) Marquez 0.54.0-Rust = la cible si un jour +4 Gio.
