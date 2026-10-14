@@ -1,0 +1,24 @@
+{
+  "table": "lakekeeper.nyc.yellow_trips",
+  "total": 20015099,
+  "by_source": [
+    {
+      "yellow_tripdata_2024-01": 2927000
+    },
+    {
+      "yellow_tripdata_2024-02": 2966785
+    },
+    {
+      "yellow_tripdata_2024-03": 3523905
+    },
+    {
+      "yellow_tripdata_2024-04": 3456486
+    },
+    {
+      "yellow_tripdata_2024-05": 3663653
+    },
+    {
+      "yellow_tripdata_2024-06": 3477270
+    }
+  ]
+}

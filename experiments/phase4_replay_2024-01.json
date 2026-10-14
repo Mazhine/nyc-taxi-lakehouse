@@ -1,0 +1,8 @@
+{
+  "source_file": "yellow_tripdata_2024-01",
+  "input_rows": 0,
+  "valid_rows": 0,
+  "quarantined_rows": 0,
+  "status": "skipped_already_loaded",
+  "drift": {}
+}

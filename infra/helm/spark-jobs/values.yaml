@@ -1,0 +1,18 @@
+image:
+  repository: lakehouse/spark-runner
+  tag: "3.5.9-0.1.0"
+runnerResources:
+  requests: {cpu: 500m, memory: 1Gi}
+  limits: {cpu: "2", memory: 3Gi}
+driverMemory: 1g
+executorInstances: 2
+executorMemory: 3g
+executorCores: 1
+catalogUri: http://lakekeeper.lakehouse.svc.cluster.local:8181/catalog
+warehouse: warehouse
+table: lakekeeper.nyc.yellow_trips
+s3Endpoint: http://minio.lakehouse.svc.cluster.local:9000
+s3AccessKey: minioadmin
+s3SecretKey: minioadmin-local-demo-only
+contractPath: /opt/spark/jobs/contracts/yellow_trips.v1.yaml
+quarantinePath: s3a://quarantine/yellow_trips

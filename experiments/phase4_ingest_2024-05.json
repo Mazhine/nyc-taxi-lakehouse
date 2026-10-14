@@ -1,0 +1,20 @@
+{
+  "source_file": "yellow_tripdata_2024-05",
+  "input_rows": 3723833,
+  "valid_rows": 3663653,
+  "quarantined_rows": 60180,
+  "status": "merged",
+  "drift": {
+    "extra_columns": [
+      "RatecodeID",
+      "store_and_fwd_flag",
+      "extra",
+      "mta_tax",
+      "tolls_amount",
+      "improvement_surcharge",
+      "congestion_surcharge",
+      "Airport_fee"
+    ],
+    "renamed_or_case_changed": []
+  }
+}

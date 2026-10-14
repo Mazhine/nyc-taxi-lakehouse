@@ -1,4 +1,5 @@
-﻿{
+﻿table exists, loaded (TableAlreadyExistsError)
+{
   "catalog_uri": "http://localhost:8181/catalog",
   "warehouse": "warehouse",
   "namespaces": [
@@ -12,8 +13,8 @@
       "yellow_trips"
     ]
   ],
-  "table_location": "s3://lakehouse/iceberg/01a13a6d-3bc1-7ca3-a6ab-74ce28f2f30b",
-  "table_schema": "table {\n  1: VendorID: optional long\n  2: tpep_pickup_datetime: required timestamp\n  3: tpep_dropoff_datetime: required timestamp\n  4: passenger_count: optional long\n  5: trip_distance: required double\n  6: PULocationID: required long\n  7: DOLocationID: required long\n  8: payment_type: optional long\n  9: fare_amount: required double\n  10: tip_amount: optional double\n  11: total_amount: required double\n  12: source_file: optional long\n}",
-  "created_now": true,
+  "table_location": "s3://lakehouse/iceberg/01a13a70-13b8-7c51-bb10-2fe69a49779e",
+  "table_schema": "table {\n  1: VendorID: optional long\n  2: tpep_pickup_datetime: required timestamp\n  3: tpep_dropoff_datetime: required timestamp\n  4: passenger_count: optional long\n  5: trip_distance: required double\n  6: PULocationID: required long\n  7: DOLocationID: required long\n  8: payment_type: optional long\n  9: fare_amount: required double\n  10: tip_amount: optional double\n  11: total_amount: required double\n  12: source_file: optional string\n  13: row_hash: optional string\n}",
+  "created_now": false,
   "pyiceberg_version": "0.12.0"
 }

@@ -11,7 +11,7 @@ from pathlib import Path
 
 from pyiceberg.catalog.rest import RestCatalog
 from pyiceberg.schema import Schema
-from pyiceberg.types import DoubleType, LongType, NestedField, TimestampType
+from pyiceberg.types import DoubleType, LongType, NestedField, StringType, TimestampType
 
 ROOT = Path(__file__).resolve().parents[1]
 EXP = ROOT / "experiments"
@@ -44,7 +44,8 @@ def main() -> None:
         NestedField(9, "fare_amount", DoubleType(), required=True),
         NestedField(10, "tip_amount", DoubleType(), required=False),
         NestedField(11, "total_amount", DoubleType(), required=True),
-        NestedField(12, "source_file", LongType(), required=False),
+        NestedField(12, "source_file", StringType(), required=False),
+        NestedField(13, "row_hash", StringType(), required=False),
     )
     table_id = f"{NAMESPACE}.{TABLE}"
     try:

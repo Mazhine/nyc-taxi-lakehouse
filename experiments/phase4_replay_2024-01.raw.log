@@ -1,0 +1,192 @@
++ MONTH=2024-01
++ LIMIT_ARGS=
++ '[' -n '' ']'
+++ hostname -i
+++ awk '{print $1}'
++ DRIVER_IP=10.244.0.161
++ /opt/spark/bin/spark-submit --master k8s://https://kubernetes.default.svc --deploy-mode client --name ingest-2024-01 --conf spark.kubernetes.namespace=lakehouse --conf spark.kubernetes.container.image=lakehouse/spark-runner:3.5.9-0.1.0 --conf spark.kubernetes.authenticate.driver.serviceAccountName=spark --conf spark.driver.host=10.244.0.161 --conf spark.driver.bindAddress=0.0.0.0 --conf spark.driver.port=22222 --conf spark.driver.blockManager.port=22223 --conf spark.driver.memory=1g --conf spark.driver.extraJavaOptions=-XX:+UseParallelGC --conf spark.executor.extraJavaOptions=-XX:+UseParallelGC --conf spark.executor.instances=2 --conf spark.executor.memory=3g --conf spark.executor.cores=1 --conf spark.executorEnv.PYTHONPATH=/opt/spark/python:/opt/spark/python/lib/py4j-0.10.9.7-src.zip --conf spark.executorEnv.PYSPARK_PYTHON=python3 --conf spark.sql.extensions=org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions --conf spark.sql.iceberg.vectorization.enabled=false local:///opt/spark/jobs/src/ingestion/ingest.py --input s3a://lakehouse/raw/yellow_tripdata_2024-01.parquet --table lakekeeper.nyc.yellow_trips --contract /opt/spark/jobs/contracts/yellow_trips.v1.yaml --source-file yellow_tripdata_2024-01 --quarantine-path s3a://quarantine/yellow_trips --catalog-uri http://lakekeeper.lakehouse.svc.cluster.local:8181/catalog --warehouse warehouse --s3-endpoint http://minio.lakehouse.svc.cluster.local:9000 --master k8s://https://kubernetes.default.svc
+26/10/14 21:04:59 WARN NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+26/10/14 21:05:00 INFO SparkContext: Running Spark version 3.5.9
+26/10/14 21:05:00 INFO SparkContext: OS info Linux, 6.6.87.2-microsoft-standard-WSL2, amd64
+26/10/14 21:05:00 INFO SparkContext: Java version 17.0.20.1
+26/10/14 21:05:00 INFO ResourceUtils: ==============================================================
+26/10/14 21:05:00 INFO ResourceUtils: No custom resources configured for spark.driver.
+26/10/14 21:05:00 INFO ResourceUtils: ==============================================================
+26/10/14 21:05:00 INFO SparkContext: Submitted application: ingest-yellow_tripdata_2024-01
+26/10/14 21:05:00 INFO ResourceProfile: Default ResourceProfile created, executor resources: Map(cores -> name: cores, amount: 1, script: , vendor: , memory -> name: memory, amount: 3072, script: , vendor: , offHeap -> name: offHeap, amount: 0, script: , vendor: ), task resources: Map(cpus -> name: cpus, amount: 1.0)
+26/10/14 21:05:00 INFO ResourceProfile: Limiting resource is cpus at 1 tasks per executor
+26/10/14 21:05:00 INFO ResourceProfileManager: Added ResourceProfile id: 0
+26/10/14 21:05:00 INFO SecurityManager: Changing view acls to: root
+26/10/14 21:05:00 INFO SecurityManager: Changing modify acls to: root
+26/10/14 21:05:00 INFO SecurityManager: Changing view acls groups to: 
+26/10/14 21:05:00 INFO SecurityManager: Changing modify acls groups to: 
+26/10/14 21:05:00 INFO SecurityManager: SecurityManager: authentication disabled; ui acls disabled; users with view permissions: root; groups with view permissions: EMPTY; users with modify permissions: root; groups with modify permissions: EMPTY
+26/10/14 21:05:01 INFO Utils: Successfully started service 'sparkDriver' on port 22222.
+26/10/14 21:05:01 INFO SparkEnv: Registering MapOutputTracker
+26/10/14 21:05:01 INFO SparkEnv: Registering BlockManagerMaster
+26/10/14 21:05:01 INFO BlockManagerMasterEndpoint: Using org.apache.spark.storage.DefaultTopologyMapper for getting topology information
+26/10/14 21:05:01 INFO BlockManagerMasterEndpoint: BlockManagerMasterEndpoint up
+26/10/14 21:05:01 INFO SparkEnv: Registering BlockManagerMasterHeartbeat
+26/10/14 21:05:01 INFO DiskBlockManager: Created local directory at /tmp/blockmgr-b7be59b3-03e9-45d8-a081-2a527a6b72cc
+26/10/14 21:05:01 INFO MemoryStore: MemoryStore started with capacity 366.3 MiB
+26/10/14 21:05:01 INFO SparkEnv: Registering OutputCommitCoordinator
+26/10/14 21:05:01 INFO JettyUtils: Start Jetty 0.0.0.0:4040 for SparkUI
+26/10/14 21:05:01 INFO Utils: Successfully started service 'SparkUI' on port 4040.
+26/10/14 21:05:01 INFO SparkKubernetesClientFactory: Auto-configuring K8S client using current context from users K8S config file
+26/10/14 21:05:01 INFO ExecutorPodsAllocator: Going to request 2 executors from Kubernetes for ResourceProfile Id: 0, target: 2, known: 0, sharedSlotFromPendingPods: 2147483647.
+26/10/14 21:05:02 INFO BasicExecutorFeatureStep: Decommissioning not enabled, skipping shutdown script
+26/10/14 21:05:02 INFO Utils: Successfully started service 'org.apache.spark.network.netty.NettyBlockTransferService' on port 22223.
+26/10/14 21:05:02 INFO NettyBlockTransferService: Server created on 10.244.0.161 0.0.0.0:22223
+26/10/14 21:05:02 INFO BlockManager: Using org.apache.spark.storage.RandomBlockReplicationPolicy for block replication policy
+26/10/14 21:05:02 INFO BlockManagerMaster: Registering BlockManager BlockManagerId(driver, 10.244.0.161, 22223, None)
+26/10/14 21:05:02 INFO BlockManagerMasterEndpoint: Registering block manager 10.244.0.161:22223 with 366.3 MiB RAM, BlockManagerId(driver, 10.244.0.161, 22223, None)
+26/10/14 21:05:02 INFO BlockManagerMaster: Registered BlockManager BlockManagerId(driver, 10.244.0.161, 22223, None)
+26/10/14 21:05:02 INFO BlockManager: Initialized BlockManager: BlockManagerId(driver, 10.244.0.161, 22223, None)
+26/10/14 21:05:02 INFO BasicExecutorFeatureStep: Decommissioning not enabled, skipping shutdown script
+26/10/14 21:05:05 INFO KubernetesClusterSchedulerBackend$KubernetesDriverEndpoint: No executor found for 10.244.0.162:55002
+26/10/14 21:05:05 INFO KubernetesClusterSchedulerBackend$KubernetesDriverEndpoint: Registered executor NettyRpcEndpointRef(spark-client://Executor) (10.244.0.162:55010) with ID 1,  ResourceProfileId 0
+26/10/14 21:05:05 INFO KubernetesClusterSchedulerBackend$KubernetesDriverEndpoint: No executor found for 10.244.0.163:41778
+26/10/14 21:05:05 INFO BlockManagerMasterEndpoint: Registering block manager 10.244.0.162:44159 with 1586.4 MiB RAM, BlockManagerId(1, 10.244.0.162, 44159, None)
+26/10/14 21:05:06 INFO KubernetesClusterSchedulerBackend$KubernetesDriverEndpoint: Registered executor NettyRpcEndpointRef(spark-client://Executor) (10.244.0.163:41788) with ID 2,  ResourceProfileId 0
+26/10/14 21:05:06 INFO KubernetesClusterSchedulerBackend: SchedulerBackend is ready for scheduling beginning after reached minRegisteredResourcesRatio: 0.8
+26/10/14 21:05:06 INFO BlockManagerMasterEndpoint: Registering block manager 10.244.0.163:36523 with 1586.4 MiB RAM, BlockManagerId(2, 10.244.0.163, 36523, None)
+26/10/14 21:05:06 INFO SharedState: Setting hive.metastore.warehouse.dir ('null') to the value of spark.sql.warehouse.dir.
+26/10/14 21:05:06 INFO SharedState: Warehouse path is 'file:/opt/spark/jobs/spark-warehouse'.
+26/10/14 21:05:07 WARN RESTSessionCatalog: Iceberg REST client is missing the OAuth2 server URI configuration and defaults to http://lakekeeper.lakehouse.svc.cluster.local:8181/catalogv1/oauth/tokens. This automatic fallback will be removed in a future Iceberg release.It is recommended to configure the OAuth2 endpoint using the 'oauth2-server-uri' property to be prepared. This warning will disappear if the OAuth2 endpoint is explicitly configured. See https://github.com/apache/iceberg/issues/10537
+26/10/14 21:05:07 INFO CatalogUtil: Loading custom FileIO implementation: org.apache.iceberg.aws.s3.S3FileIO
+26/10/14 21:05:07 INFO CatalogUtil: Loading custom FileIO implementation: org.apache.iceberg.aws.s3.S3FileIO
+26/10/14 21:05:08 INFO SparkScanBuilder: Skipping aggregate pushdown: group by aggregation push down is not supported
+26/10/14 21:05:08 INFO V2ScanRelationPushDown: 
+Output: source_file#11
+         
+26/10/14 21:05:08 INFO SnapshotScan: Scanning table lakekeeper.nyc.yellow_trips snapshot 4188281640187836848 created at 2026-10-14T17:45:33.491+00:00 with filter true
+26/10/14 21:05:09 INFO BaseDistributedDataScan: Planning file tasks locally for table lakekeeper.nyc.yellow_trips
+26/10/14 21:05:09 INFO LoggingMetricsReporter: Received metrics report: ScanReport{tableName=lakekeeper.nyc.yellow_trips, snapshotId=4188281640187836848, filter=true, schemaId=0, projectedFieldIds=[12], projectedFieldNames=[source_file], scanMetrics=ScanMetricsResult{totalPlanningDuration=TimerResult{timeUnit=NANOSECONDS, totalDuration=PT0.954362057S, count=1}, resultDataFiles=CounterResult{unit=COUNT, value=27}, resultDeleteFiles=CounterResult{unit=COUNT, value=0}, totalDataManifests=CounterResult{unit=COUNT, value=7}, totalDeleteManifests=CounterResult{unit=COUNT, value=0}, scannedDataManifests=CounterResult{unit=COUNT, value=7}, skippedDataManifests=CounterResult{unit=COUNT, value=0}, totalFileSizeInBytes=CounterResult{unit=BYTES, value=723337150}, totalDeleteFileSizeInBytes=CounterResult{unit=BYTES, value=0}, skippedDataFiles=CounterResult{unit=COUNT, value=0}, skippedDeleteFiles=CounterResult{unit=COUNT, value=0}, scannedDeleteManifests=CounterResult{unit=COUNT, value=0}, skippedDeleteManifests=CounterResult{unit=COUNT, value=0}, indexedDeleteFiles=CounterResult{unit=COUNT, value=0}, equalityDeleteFiles=CounterResult{unit=COUNT, value=0}, positionalDeleteFiles=CounterResult{unit=COUNT, value=0}}, metadata={engine-version=3.5.9, iceberg-version=Apache Iceberg 1.6.1 (commit 8e9d59d299be42b0bca9461457cd1e95dbaad086), app-id=spark-e6b20dbce66e42479391d7abe2314721, engine-name=spark}}
+26/10/14 21:05:09 INFO SparkPartitioningAwareScan: Reporting UnknownPartitioning with 25 partition(s) for table lakekeeper.nyc.yellow_trips
+26/10/14 21:05:09 INFO MemoryStore: Block broadcast_0 stored as values in memory (estimated size 32.0 KiB, free 366.3 MiB)
+26/10/14 21:05:09 INFO MemoryStore: Block broadcast_0_piece0 stored as bytes in memory (estimated size 4.0 KiB, free 366.3 MiB)
+26/10/14 21:05:09 INFO BlockManagerInfo: Added broadcast_0_piece0 in memory on 10.244.0.161:22223 (size: 4.0 KiB, free: 366.3 MiB)
+26/10/14 21:05:10 INFO SparkContext: Created broadcast 0 from collect at /opt/spark/jobs/src/ingestion/ingest.py:197
+26/10/14 21:05:10 INFO MemoryStore: Block broadcast_1 stored as values in memory (estimated size 32.0 KiB, free 366.2 MiB)
+26/10/14 21:05:10 INFO MemoryStore: Block broadcast_1_piece0 stored as bytes in memory (estimated size 4.0 KiB, free 366.2 MiB)
+26/10/14 21:05:10 INFO BlockManagerInfo: Added broadcast_1_piece0 in memory on 10.244.0.161:22223 (size: 4.0 KiB, free: 366.3 MiB)
+26/10/14 21:05:10 INFO SparkContext: Created broadcast 1 from collect at /opt/spark/jobs/src/ingestion/ingest.py:197
+26/10/14 21:05:10 INFO CodeGenerator: Code generated in 251.125847 ms
+26/10/14 21:05:10 INFO DAGScheduler: Registering RDD 3 (collect at /opt/spark/jobs/src/ingestion/ingest.py:197) as input to shuffle 0
+26/10/14 21:05:10 INFO DAGScheduler: Got map stage job 0 (collect at /opt/spark/jobs/src/ingestion/ingest.py:197) with 25 output partitions
+26/10/14 21:05:10 INFO DAGScheduler: Final stage: ShuffleMapStage 0 (collect at /opt/spark/jobs/src/ingestion/ingest.py:197)
+26/10/14 21:05:10 INFO DAGScheduler: Parents of final stage: List()
+26/10/14 21:05:10 INFO DAGScheduler: Missing parents: List()
+26/10/14 21:05:10 INFO DAGScheduler: Submitting ShuffleMapStage 0 (MapPartitionsRDD[3] at collect at /opt/spark/jobs/src/ingestion/ingest.py:197), which has no missing parents
+26/10/14 21:05:10 INFO MemoryStore: Block broadcast_2 stored as values in memory (estimated size 26.6 KiB, free 366.2 MiB)
+26/10/14 21:05:10 INFO MemoryStore: Block broadcast_2_piece0 stored as bytes in memory (estimated size 11.6 KiB, free 366.2 MiB)
+26/10/14 21:05:10 INFO BlockManagerInfo: Added broadcast_2_piece0 in memory on 10.244.0.161:22223 (size: 11.6 KiB, free: 366.3 MiB)
+26/10/14 21:05:10 INFO SparkContext: Created broadcast 2 from broadcast at DAGScheduler.scala:1611
+26/10/14 21:05:10 INFO DAGScheduler: Submitting 25 missing tasks from ShuffleMapStage 0 (MapPartitionsRDD[3] at collect at /opt/spark/jobs/src/ingestion/ingest.py:197) (first 15 tasks are for partitions Vector(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14))
+26/10/14 21:05:10 INFO TaskSchedulerImpl: Adding task set 0.0 with 25 tasks resource profile 0
+26/10/14 21:05:10 INFO TaskSetManager: Starting task 0.0 in stage 0.0 (TID 0) (10.244.0.163, executor 2, partition 0, PROCESS_LOCAL, 13842 bytes) 
+26/10/14 21:05:10 INFO TaskSetManager: Starting task 1.0 in stage 0.0 (TID 1) (10.244.0.162, executor 1, partition 1, PROCESS_LOCAL, 13842 bytes) 
+26/10/14 21:05:11 INFO BlockManagerInfo: Added broadcast_2_piece0 in memory on 10.244.0.162:44159 (size: 11.6 KiB, free: 1586.4 MiB)
+26/10/14 21:05:11 INFO BlockManagerInfo: Added broadcast_2_piece0 in memory on 10.244.0.163:36523 (size: 11.6 KiB, free: 1586.4 MiB)
+26/10/14 21:05:12 INFO BlockManagerInfo: Added broadcast_1_piece0 in memory on 10.244.0.163:36523 (size: 4.0 KiB, free: 1586.4 MiB)
+26/10/14 21:05:12 INFO BlockManagerInfo: Added broadcast_1_piece0 in memory on 10.244.0.162:44159 (size: 4.0 KiB, free: 1586.4 MiB)
+26/10/14 21:05:16 INFO TaskSetManager: Starting task 2.0 in stage 0.0 (TID 2) (10.244.0.162, executor 1, partition 2, PROCESS_LOCAL, 13842 bytes) 
+26/10/14 21:05:16 INFO TaskSetManager: Finished task 1.0 in stage 0.0 (TID 1) in 5459 ms on 10.244.0.162 (executor 1) (1/25)
+26/10/14 21:05:16 INFO TaskSetManager: Starting task 3.0 in stage 0.0 (TID 3) (10.244.0.162, executor 1, partition 3, PROCESS_LOCAL, 13842 bytes) 
+26/10/14 21:05:16 INFO TaskSetManager: Finished task 2.0 in stage 0.0 (TID 2) in 597 ms on 10.244.0.162 (executor 1) (2/25)
+26/10/14 21:05:17 INFO TaskSetManager: Starting task 4.0 in stage 0.0 (TID 4) (10.244.0.163, executor 2, partition 4, PROCESS_LOCAL, 13842 bytes) 
+26/10/14 21:05:17 INFO TaskSetManager: Finished task 0.0 in stage 0.0 (TID 0) in 6645 ms on 10.244.0.163 (executor 2) (3/25)
+26/10/14 21:05:17 INFO TaskSetManager: Starting task 5.0 in stage 0.0 (TID 5) (10.244.0.162, executor 1, partition 5, PROCESS_LOCAL, 13842 bytes) 
+26/10/14 21:05:17 INFO TaskSetManager: Finished task 3.0 in stage 0.0 (TID 3) in 632 ms on 10.244.0.162 (executor 1) (4/25)
+26/10/14 21:05:18 INFO TaskSetManager: Starting task 6.0 in stage 0.0 (TID 6) (10.244.0.163, executor 2, partition 6, PROCESS_LOCAL, 13842 bytes) 
+26/10/14 21:05:18 INFO TaskSetManager: Finished task 4.0 in stage 0.0 (TID 4) in 744 ms on 10.244.0.163 (executor 2) (5/25)
+26/10/14 21:05:18 INFO TaskSetManager: Starting task 7.0 in stage 0.0 (TID 7) (10.244.0.162, executor 1, partition 7, PROCESS_LOCAL, 13842 bytes) 
+26/10/14 21:05:18 INFO TaskSetManager: Finished task 5.0 in stage 0.0 (TID 5) in 700 ms on 10.244.0.162 (executor 1) (6/25)
+26/10/14 21:05:19 INFO TaskSetManager: Starting task 8.0 in stage 0.0 (TID 8) (10.244.0.163, executor 2, partition 8, PROCESS_LOCAL, 13842 bytes) 
+26/10/14 21:05:19 INFO TaskSetManager: Finished task 6.0 in stage 0.0 (TID 6) in 802 ms on 10.244.0.163 (executor 2) (7/25)
+26/10/14 21:05:19 INFO TaskSetManager: Starting task 9.0 in stage 0.0 (TID 9) (10.244.0.162, executor 1, partition 9, PROCESS_LOCAL, 13842 bytes) 
+26/10/14 21:05:19 INFO TaskSetManager: Finished task 7.0 in stage 0.0 (TID 7) in 798 ms on 10.244.0.162 (executor 1) (8/25)
+26/10/14 21:05:19 INFO TaskSetManager: Starting task 10.0 in stage 0.0 (TID 10) (10.244.0.163, executor 2, partition 10, PROCESS_LOCAL, 13842 bytes) 
+26/10/14 21:05:19 INFO TaskSetManager: Finished task 8.0 in stage 0.0 (TID 8) in 676 ms on 10.244.0.163 (executor 2) (9/25)
+26/10/14 21:05:19 INFO TaskSetManager: Starting task 11.0 in stage 0.0 (TID 11) (10.244.0.162, executor 1, partition 11, PROCESS_LOCAL, 13842 bytes) 
+26/10/14 21:05:19 INFO TaskSetManager: Finished task 9.0 in stage 0.0 (TID 9) in 778 ms on 10.244.0.162 (executor 1) (10/25)
+26/10/14 21:05:20 INFO TaskSetManager: Starting task 12.0 in stage 0.0 (TID 12) (10.244.0.163, executor 2, partition 12, PROCESS_LOCAL, 13842 bytes) 
+26/10/14 21:05:20 INFO TaskSetManager: Finished task 10.0 in stage 0.0 (TID 10) in 627 ms on 10.244.0.163 (executor 2) (11/25)
+26/10/14 21:05:20 INFO TaskSetManager: Starting task 13.0 in stage 0.0 (TID 13) (10.244.0.162, executor 1, partition 13, PROCESS_LOCAL, 13842 bytes) 
+26/10/14 21:05:20 INFO TaskSetManager: Finished task 11.0 in stage 0.0 (TID 11) in 661 ms on 10.244.0.162 (executor 1) (12/25)
+26/10/14 21:05:21 INFO TaskSetManager: Starting task 14.0 in stage 0.0 (TID 14) (10.244.0.163, executor 2, partition 14, PROCESS_LOCAL, 13842 bytes) 
+26/10/14 21:05:21 INFO TaskSetManager: Finished task 12.0 in stage 0.0 (TID 12) in 615 ms on 10.244.0.163 (executor 2) (13/25)
+26/10/14 21:05:21 INFO TaskSetManager: Starting task 15.0 in stage 0.0 (TID 15) (10.244.0.162, executor 1, partition 15, PROCESS_LOCAL, 13842 bytes) 
+26/10/14 21:05:21 INFO TaskSetManager: Finished task 13.0 in stage 0.0 (TID 13) in 642 ms on 10.244.0.162 (executor 1) (14/25)
+26/10/14 21:05:21 INFO TaskSetManager: Starting task 16.0 in stage 0.0 (TID 16) (10.244.0.163, executor 2, partition 16, PROCESS_LOCAL, 13842 bytes) 
+26/10/14 21:05:21 INFO TaskSetManager: Finished task 14.0 in stage 0.0 (TID 14) in 643 ms on 10.244.0.163 (executor 2) (15/25)
+26/10/14 21:05:21 INFO TaskSetManager: Starting task 17.0 in stage 0.0 (TID 17) (10.244.0.163, executor 2, partition 17, PROCESS_LOCAL, 14291 bytes) 
+26/10/14 21:05:21 INFO TaskSetManager: Finished task 16.0 in stage 0.0 (TID 16) in 183 ms on 10.244.0.163 (executor 2) (16/25)
+26/10/14 21:05:21 INFO TaskSetManager: Starting task 18.0 in stage 0.0 (TID 18) (10.244.0.162, executor 1, partition 18, PROCESS_LOCAL, 13842 bytes) 
+26/10/14 21:05:21 INFO TaskSetManager: Finished task 15.0 in stage 0.0 (TID 15) in 697 ms on 10.244.0.162 (executor 1) (17/25)
+26/10/14 21:05:21 INFO TaskSetManager: Starting task 19.0 in stage 0.0 (TID 19) (10.244.0.163, executor 2, partition 19, PROCESS_LOCAL, 13842 bytes) 
+26/10/14 21:05:21 INFO TaskSetManager: Finished task 17.0 in stage 0.0 (TID 17) in 161 ms on 10.244.0.163 (executor 2) (18/25)
+26/10/14 21:05:22 INFO TaskSetManager: Starting task 20.0 in stage 0.0 (TID 20) (10.244.0.162, executor 1, partition 20, PROCESS_LOCAL, 13842 bytes) 
+26/10/14 21:05:22 INFO TaskSetManager: Finished task 18.0 in stage 0.0 (TID 18) in 320 ms on 10.244.0.162 (executor 1) (19/25)
+26/10/14 21:05:22 INFO TaskSetManager: Starting task 21.0 in stage 0.0 (TID 21) (10.244.0.163, executor 2, partition 21, PROCESS_LOCAL, 13842 bytes) 
+26/10/14 21:05:22 INFO TaskSetManager: Finished task 19.0 in stage 0.0 (TID 19) in 221 ms on 10.244.0.163 (executor 2) (20/25)
+26/10/14 21:05:22 INFO TaskSetManager: Starting task 22.0 in stage 0.0 (TID 22) (10.244.0.162, executor 1, partition 22, PROCESS_LOCAL, 14291 bytes) 
+26/10/14 21:05:22 INFO TaskSetManager: Finished task 20.0 in stage 0.0 (TID 20) in 226 ms on 10.244.0.162 (executor 1) (21/25)
+26/10/14 21:05:22 INFO TaskSetManager: Starting task 23.0 in stage 0.0 (TID 23) (10.244.0.163, executor 2, partition 23, PROCESS_LOCAL, 13842 bytes) 
+26/10/14 21:05:22 INFO TaskSetManager: Finished task 21.0 in stage 0.0 (TID 21) in 275 ms on 10.244.0.163 (executor 2) (22/25)
+26/10/14 21:05:22 INFO TaskSetManager: Starting task 24.0 in stage 0.0 (TID 24) (10.244.0.163, executor 2, partition 24, PROCESS_LOCAL, 13833 bytes) 
+26/10/14 21:05:22 INFO TaskSetManager: Finished task 23.0 in stage 0.0 (TID 23) in 397 ms on 10.244.0.163 (executor 2) (23/25)
+26/10/14 21:05:22 INFO TaskSetManager: Finished task 22.0 in stage 0.0 (TID 22) in 460 ms on 10.244.0.162 (executor 1) (24/25)
+26/10/14 21:05:22 INFO TaskSetManager: Finished task 24.0 in stage 0.0 (TID 24) in 196 ms on 10.244.0.163 (executor 2) (25/25)
+26/10/14 21:05:22 INFO TaskSchedulerImpl: Removed TaskSet 0.0, whose tasks have all completed, from pool 
+26/10/14 21:05:22 INFO DAGScheduler: ShuffleMapStage 0 (collect at /opt/spark/jobs/src/ingestion/ingest.py:197) finished in 12.084 s
+26/10/14 21:05:22 INFO DAGScheduler: looking for newly runnable stages
+26/10/14 21:05:22 INFO DAGScheduler: running: Set()
+26/10/14 21:05:22 INFO DAGScheduler: waiting: Set()
+26/10/14 21:05:22 INFO DAGScheduler: failed: Set()
+26/10/14 21:05:22 INFO ShufflePartitionsUtil: For shuffle(0), advisory target size: 67108864, actual target size 1048576, minimum partition size: 1048576
+26/10/14 21:05:23 INFO CodeGenerator: Code generated in 68.299084 ms
+26/10/14 21:05:23 INFO SparkContext: Starting job: collect at /opt/spark/jobs/src/ingestion/ingest.py:197
+26/10/14 21:05:23 INFO DAGScheduler: Got job 1 (collect at /opt/spark/jobs/src/ingestion/ingest.py:197) with 1 output partitions
+26/10/14 21:05:23 INFO DAGScheduler: Final stage: ResultStage 2 (collect at /opt/spark/jobs/src/ingestion/ingest.py:197)
+26/10/14 21:05:23 INFO DAGScheduler: Parents of final stage: List(ShuffleMapStage 1)
+26/10/14 21:05:23 INFO DAGScheduler: Missing parents: List()
+26/10/14 21:05:23 INFO DAGScheduler: Submitting ResultStage 2 (MapPartitionsRDD[6] at collect at /opt/spark/jobs/src/ingestion/ingest.py:197), which has no missing parents
+26/10/14 21:05:23 INFO MemoryStore: Block broadcast_3 stored as values in memory (estimated size 38.8 KiB, free 366.2 MiB)
+26/10/14 21:05:23 INFO MemoryStore: Block broadcast_3_piece0 stored as bytes in memory (estimated size 17.5 KiB, free 366.1 MiB)
+26/10/14 21:05:23 INFO BlockManagerInfo: Added broadcast_3_piece0 in memory on 10.244.0.161:22223 (size: 17.5 KiB, free: 366.3 MiB)
+26/10/14 21:05:23 INFO SparkContext: Created broadcast 3 from broadcast at DAGScheduler.scala:1611
+26/10/14 21:05:23 INFO DAGScheduler: Submitting 1 missing tasks from ResultStage 2 (MapPartitionsRDD[6] at collect at /opt/spark/jobs/src/ingestion/ingest.py:197) (first 15 tasks are for partitions Vector(0))
+26/10/14 21:05:23 INFO TaskSchedulerImpl: Adding task set 2.0 with 1 tasks resource profile 0
+26/10/14 21:05:23 INFO TaskSetManager: Starting task 0.0 in stage 2.0 (TID 25) (10.244.0.163, executor 2, partition 0, NODE_LOCAL, 9018 bytes) 
+26/10/14 21:05:23 INFO BlockManagerInfo: Added broadcast_3_piece0 in memory on 10.244.0.163:36523 (size: 17.5 KiB, free: 1586.4 MiB)
+26/10/14 21:05:23 INFO MapOutputTrackerMasterEndpoint: Asked to send map output locations for shuffle 0 to 10.244.0.163:41788
+26/10/14 21:05:23 INFO TaskSetManager: Finished task 0.0 in stage 2.0 (TID 25) in 281 ms on 10.244.0.163 (executor 2) (1/1)
+26/10/14 21:05:23 INFO TaskSchedulerImpl: Removed TaskSet 2.0, whose tasks have all completed, from pool 
+26/10/14 21:05:23 INFO DAGScheduler: ResultStage 2 (collect at /opt/spark/jobs/src/ingestion/ingest.py:197) finished in 0.296 s
+26/10/14 21:05:23 INFO DAGScheduler: Job 1 is finished. Cancelling potential speculative or zombie tasks for this job
+26/10/14 21:05:23 INFO TaskSchedulerImpl: Killing all running tasks in stage 2: Stage finished
+26/10/14 21:05:23 INFO DAGScheduler: Job 1 finished: collect at /opt/spark/jobs/src/ingestion/ingest.py:197, took 0.324920 s
+26/10/14 21:05:23 INFO SparkContext: SparkContext is stopping with exitCode 0.
+26/10/14 21:05:23 INFO SparkUI: Stopped Spark web UI at http://10.244.0.161:4040
+26/10/14 21:05:23 INFO KubernetesClusterSchedulerBackend: Shutting down all executors
+26/10/14 21:05:23 INFO KubernetesClusterSchedulerBackend$KubernetesDriverEndpoint: Asking each executor to shut down
+26/10/14 21:05:23 WARN ExecutorPodsWatchSnapshotSource: Kubernetes client has been closed.
+26/10/14 21:05:23 INFO MapOutputTrackerMasterEndpoint: MapOutputTrackerMasterEndpoint stopped!
+26/10/14 21:05:23 INFO MemoryStore: MemoryStore cleared
+26/10/14 21:05:23 INFO BlockManager: BlockManager stopped
+26/10/14 21:05:23 INFO BlockManagerMaster: BlockManagerMaster stopped
+26/10/14 21:05:23 INFO OutputCommitCoordinator$OutputCommitCoordinatorEndpoint: OutputCommitCoordinator stopped!
+26/10/14 21:05:23 INFO SparkContext: Successfully stopped SparkContext
+{
+  "source_file": "yellow_tripdata_2024-01",
+  "input_rows": 0,
+  "valid_rows": 0,
+  "quarantined_rows": 0,
+  "status": "skipped_already_loaded",
+  "drift": {}
+}
+26/10/14 21:05:24 INFO ShutdownHookManager: Shutdown hook called
+26/10/14 21:05:24 INFO ShutdownHookManager: Deleting directory /tmp/spark-2022bad6-6885-40a6-833d-6c900344e4dd
+26/10/14 21:05:24 INFO ShutdownHookManager: Deleting directory /tmp/spark-2022bad6-6885-40a6-833d-6c900344e4dd/pyspark-6d62b83e-7277-48ce-a4f0-453443dcc25d
+26/10/14 21:05:24 INFO ShutdownHookManager: Deleting directory /tmp/spark-388090d8-1b3d-4a98-9a41-bda12b25461f

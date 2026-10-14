@@ -1,0 +1,5 @@
+apiVersion: v2
+name: spark-jobs
+description: Spark-on-K8s ingestion jobs (client mode, small executors)
+type: application
+version: 0.1.0

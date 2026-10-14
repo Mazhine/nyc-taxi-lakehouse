@@ -90,3 +90,40 @@ by picking the most reasonable option and writing it here.
   No manual `kubectl` hidden: everything is in the repo. Once a remote exists,
   `kubectl apply -f infra/argocd/root-app.yaml` enables full GitOps sync.
 - Hypothesis: acceptable per rule 6 (no hidden manual config; limitation dite).
+
+## D11 — Table pre-ingestion recréée (schéma corrigé)
+- Context: Phase 3 smoke table had `source_file long` (wrong type for labels).
+- Choice: dropped the EMPTY table and recreated it with
+  `source_file string, row_hash string`. No data lost. Schema-evolution demos
+  (add/rename/partition) happen on loaded data in Phase 7 instead.
+
+## D12 — Tests Spark dans un conteneur Linux, pas sur l'hôte Windows
+- Context: Spark local hangs on the Windows host (non-ASCII OneDrive path,
+  winutils/HADOOP_HOME friction, OneDrive file latency).
+- Choice: `tests/test_ingest_spark.py` runs in `apache/spark:3.5.9` container
+  (12/12 green). Host runs ruff + 9 pure-python tests. Documented as-is.
+
+## D13 — Idempotence par registre de fichiers + append (pas de MERGE global)
+- Context: MERGE on (source_file, row_hash) worked into an empty/small table
+  (6 months loaded), but replaying into the 20 M-row table kills executors
+  (exit 134, repeated) on this 2×3g single node — full-target shuffle too big.
+- Choice: file-level ledger. Each load first reads
+  `SELECT DISTINCT source_file FROM <table>`; if the file label is present the
+  run is a no-op (`skipped_already_loaded`, no quarantine rewrite either).
+  Otherwise rows append. Immutable taxi files make file-level the right grain;
+  `build_merge_sql()` stays as a tested utility for future upsert tables.
+- Hypothesis: DISTINCT scan of one narrow column stays cheap; verified by replay.
+
+## D14 — Lecteur vectorisé Iceberg désactivé + Java 17 + ParallelGC
+- Context: toute lecture de la table Iceberg via Spark tuait les exécuteurs
+  (exit 134, SIGSEGV libjvm : `G1BarrierSet`, `ciType::make`, `SymbolTable`),
+  alors que le parquet brut via S3A passait (2 M lignes OK). Même un COUNT sur
+  3 fichiers échouait (VerifyError).
+- Options testées : ParallelGC seul (échec), TieredStopAtLevel=1 (échec),
+  Java 17 Temurin (échec, autre frame), lecture S3A directe (OK).
+- Choice: `spark.sql.iceberg.vectorization.enabled=false` (lecture row-based),
+  Java 17 + ParallelGC conservés par prudence, exécuteurs 2×3 Go. DISTINCT sur
+  20 M lignes OK, COUNT total OK, rejeu OK.
+- Coût : lectures Spark plus lentes (mesuré en phase 7, pas estimé).
+- Hypothesis: l'Arrow off-heap du lecteur vectorisé est incompatible avec
+  cette JVM sous WSL2/Docker ; à re-tester sur une autre machine.

@@ -1,0 +1,45 @@
+﻿26/10/14 17:42:16 INFO DAGScheduler: Job 10 finished: sql at NativeMethodAccessorImpl.java:0, took 7.373871 s
+26/10/14 17:42:16 INFO AppendDataExec: Data source write support IcebergBatchWrite(table=lakekeeper.nyc.yellow_trips, format=PARQUET) is committing.
+26/10/14 17:42:16 INFO SparkWrite: Committing append with 4 new data files to table lakekeeper.nyc.yellow_trips
+26/10/14 17:42:16 INFO SnapshotProducer: Committed snapshot 8191393748541208997 (MergeAppend)
+26/10/14 17:42:16 INFO LoggingMetricsReporter: Received metrics report: CommitReport{tableName=lakekeeper.nyc.yellow_trips, snapshotId=8191393748541208997, sequenceNumber=3, operation=append, commitMetrics=CommitMetricsResult{totalDuration=TimerResult{timeUnit=NANOSECONDS, totalDuration=PT0.215376985S, count=1}, attempts=CounterResult{unit=COUNT, value=1}, addedDataFiles=CounterResult{unit=COUNT, value=4}, removedDataFiles=null, totalDataFiles=CounterResult{unit=COUNT, value=7}, addedDeleteFiles=null, addedEqualityDeleteFiles=null, addedPositionalDeleteFiles=null, removedDeleteFiles=null, removedEqualityDeleteFiles=null, removedPositionalDeleteFiles=null, totalDeleteFiles=CounterResult{unit=COUNT, value=0}, addedRecords=CounterResult{unit=COUNT, value=2966785}, removedRecords=null, totalRecords=CounterResult{unit=COUNT, value=5893785}, addedFilesSizeInBytes=CounterResult{unit=BYTES, value=107435174}, removedFilesSizeInBytes=null, totalFilesSizeInBytes=CounterResult{unit=BYTES, value=210693714}, addedPositionalDeletes=null, removedPositionalDeletes=null, totalPositionalDeletes=CounterResult{unit=COUNT, value=0}, addedEqualityDeletes=null, removedEqualityDeletes=null, totalEqualityDeletes=CounterResult{unit=COUNT, value=0}}, metadata={engine-version=3.5.9, app-id=spark-bae4d31c268f45fdb57a42854432c03a, engine-name=spark, iceberg-version=Apache Iceberg 1.6.1 (commit 8e9d59d299be42b0bca9461457cd1e95dbaad086)}}
+26/10/14 17:42:16 INFO SparkWrite: Committed in 230 ms
+26/10/14 17:42:16 INFO AppendDataExec: Data source write support IcebergBatchWrite(table=lakekeeper.nyc.yellow_trips, format=PARQUET) committed.
+26/10/14 17:42:16 INFO SparkContext: SparkContext is stopping with exitCode 0.
+26/10/14 17:42:16 INFO SparkUI: Stopped Spark web UI at http://10.244.0.87:4040
+26/10/14 17:42:16 INFO KubernetesClusterSchedulerBackend: Shutting down all executors
+26/10/14 17:42:16 INFO KubernetesClusterSchedulerBackend$KubernetesDriverEndpoint: Asking each executor to shut down
+26/10/14 17:42:16 WARN ExecutorPodsWatchSnapshotSource: Kubernetes client has been closed.
+26/10/14 17:42:16 INFO MapOutputTrackerMasterEndpoint: MapOutputTrackerMasterEndpoint stopped!
+26/10/14 17:42:16 INFO MemoryStore: MemoryStore cleared
+26/10/14 17:42:16 INFO BlockManager: BlockManager stopped
+26/10/14 17:42:16 INFO BlockManagerMaster: BlockManagerMaster stopped
+26/10/14 17:42:16 INFO OutputCommitCoordinator$OutputCommitCoordinatorEndpoint: OutputCommitCoordinator stopped!
+26/10/14 17:42:16 INFO SparkContext: Successfully stopped SparkContext
+{
+  "source_file": "yellow_tripdata_2024-02",
+  "input_rows": 3007526,
+  "valid_rows": 2966785,
+  "quarantined_rows": 40741,
+  "status": "merged",
+  "drift": {
+    "extra_columns": [
+      "RatecodeID",
+      "store_and_fwd_flag",
+      "extra",
+      "mta_tax",
+      "tolls_amount",
+      "improvement_surcharge",
+      "congestion_surcharge",
+      "Airport_fee"
+    ],
+    "renamed_or_case_changed": []
+  }
+}
+26/10/14 17:42:17 INFO ShutdownHookManager: Shutdown hook called
+26/10/14 17:42:17 INFO ShutdownHookManager: Deleting directory /tmp/spark-d57ad77c-e0e5-4484-bf16-91796b8bba15/pyspark-55c3a6b7-15d5-4e17-809f-e1c9bbae402a
+26/10/14 17:42:17 INFO ShutdownHookManager: Deleting directory /tmp/spark-61d1e382-28f8-4072-a3da-5bbc3e9be7be
+26/10/14 17:42:17 INFO ShutdownHookManager: Deleting directory /tmp/spark-d57ad77c-e0e5-4484-bf16-91796b8bba15
+26/10/14 17:42:17 INFO MetricsSystemImpl: Stopping s3a-file-system metrics system...
+26/10/14 17:42:17 INFO MetricsSystemImpl: s3a-file-system metrics system stopped.
+26/10/14 17:42:17 INFO MetricsSystemImpl: s3a-file-system metrics system shutdown complete.
