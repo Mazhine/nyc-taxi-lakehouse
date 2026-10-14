@@ -1,9 +1,9 @@
 """GX probe: minimal pandas validation to pin down the 1.x API."""
 
-import pandas as pd
-import great_expectations as gx
-from great_expectations.datasource.fluent.batch_request import BatchParameters
 import shutil
+
+import great_expectations as gx
+import pandas as pd
 
 shutil.rmtree("gx_probe", ignore_errors=True)
 
