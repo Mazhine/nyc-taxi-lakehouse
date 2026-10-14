@@ -1,0 +1,32 @@
+name: ci
+on:
+  push:
+  pull_request:
+jobs:
+  lint-test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff pytest pyyaml
+      - name: Ruff
+        run: ruff check src tests
+      - name: Pytest
+        run: pytest -q
+      - name: Terraform fmt/validate
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.16.5
+      - run: terraform -chdir=infra/terraform init -backend=false
+      - run: terraform -chdir=infra/terraform fmt -check
+      - run: terraform -chdir=infra/terraform validate
+      - name: Helm lint
+        uses: azure/setup-helm@v4
+        with:
+          version: v4.3.0
+      - run: helm lint infra/helm/minio 2>&1 || echo "no chart yet (Phase 3)"

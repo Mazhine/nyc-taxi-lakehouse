@@ -1,0 +1,43 @@
+# Python / venv
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Data (never versioned)
+data/
+*.parquet
+*.csv
+!contracts/**/*.csv
+
+# Env / secrets
+.env
+*.env
+!*.example
+
+# Terraform
+infra/terraform/.terraform/
+infra/terraform/.terraform.lock.hcl
+infra/terraform/terraform.tfstate*
+infra/terraform/*.tfvars
+
+# Kube / local
+kubeconfig*
+*.kubeconfig
+
+# Experiments outputs are versioned (small text/json only); no binaries
+experiments/*.parquet
+experiments/*.bin
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+
+# Docker
+.docker/

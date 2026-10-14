@@ -1,0 +1,16 @@
+Phase 0 env check — 2026-10-14, Windows 11, PowerShell, Python 3.12.10
+Commands run and outputs (abridged):
+- python --version => Python 3.12.10
+- pip 25.0.1 / git 2.53.0.windows.2
+- docker --version => Docker 29.5.3; docker version => Desktop 4.78.0, Engine 29.5.3 (daemon restarted OK, hello-world ran)
+- kubectl version --client => v1.34.1 / Kustomize v5.7.1
+- helm version => v4.3.0 (installed via winget Helm.Helm 4.3.0)
+- terraform -version => v1.16.5 (installed via winget Hashicorp.Terraform 1.16.5)
+- kind --version => kind version 0.33.0 (installed via winget Kubernetes.kind 0.33.0)
+- RAM => 34032443392 bytes (~32 GB); Free ~18.9 GB at check; Disk C free 339866533888 bytes (~316 GiB)
+- HypervisorPresent => True; WSL distros: docker-desktop (was Stopped, started), Ubuntu-24.04
+- Created ~/.wslconfig: memory=20GB, processors=8, swap=4GB, localhostForwarding=true
+Tool sources verified 2026-10-14: Trino chart 1.44.0/app 483 (trinodb/charts, ArtifactHUB Oct 2026);
+Argo CD 3.5.5/chart 10.10.3 (GitHub releases Oct 2026); Lakekeeper 0.13.5 Sep 2026;
+Polaris ASF top-level Feb 2026 v1.8.0 Sep 2026; Spark 3.5.9/4.2.0 Jul 2026; MinIO Sep 2026 releases.
+Catalog decision: Lakekeeper 0.13.5 (light single binary) over Polaris/Nessie — see docs/DECISIONS.md D02.

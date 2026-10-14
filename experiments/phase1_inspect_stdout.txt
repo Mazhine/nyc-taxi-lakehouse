@@ -1,0 +1,37 @@
+﻿inspected 8 files => tlc_schema_report.json
+yellow_tripdata_2019-01.parquet: rows=7696617 cols=19 extra_vs_first=[] missing_vs_first=[]
+yellow_tripdata_2023-01.parquet: rows=3066766 cols=19 extra_vs_first=[] missing_vs_first=[]
+yellow_tripdata_2024-01.parquet: rows=2964624 cols=19 extra_vs_first=['Airport_fee'] missing_vs_first=['airport_fee']
+yellow_tripdata_2024-02.parquet: rows=3007526 cols=19 extra_vs_first=['Airport_fee'] missing_vs_first=['airport_fee']
+yellow_tripdata_2024-03.parquet: rows=3582628 cols=19 extra_vs_first=['Airport_fee'] missing_vs_first=['airport_fee']
+yellow_tripdata_2024-04.parquet: rows=3514289 cols=19 extra_vs_first=['Airport_fee'] missing_vs_first=['airport_fee']
+yellow_tripdata_2024-05.parquet: rows=3723833 cols=19 extra_vs_first=['Airport_fee'] missing_vs_first=['airport_fee']
+yellow_tripdata_2024-06.parquet: rows=3539193 cols=19 extra_vs_first=['Airport_fee'] missing_vs_first=['airport_fee']
+2019-01 cols: ['VendorID', 'tpep_pickup_datetime', 'tpep_dropoff_datetime', 'passenger_count', 'trip_distance', 'RatecodeID', 'store_and_fwd_flag', 'PULocationID', 'DOLocationID', 'payment_type', 'fare_amount', 'extra', 'mta_tax', 'tip_amount', 'tolls_amount', 'improvement_surcharge', 'total_amount', 'congestion_surcharge', 'airport_fee']
+2024-01 cols: ['VendorID', 'tpep_pickup_datetime', 'tpep_dropoff_datetime', 'passenger_count', 'trip_distance', 'RatecodeID', 'store_and_fwd_flag', 'PULocationID', 'DOLocationID', 'payment_type', 'fare_amount', 'extra', 'mta_tax', 'tip_amount', 'tolls_amount', 'improvement_surcharge', 'total_amount', 'congestion_surcharge', 'Airport_fee']
+type_changes_2019_vs_2024: {
+  "RatecodeID": [
+    "double",
+    "int64"
+  ],
+  "VendorID": [
+    "int64",
+    "int32"
+  ],
+  "store_and_fwd_flag": [
+    "string",
+    "large_string"
+  ],
+  "passenger_count": [
+    "double",
+    "int64"
+  ],
+  "PULocationID": [
+    "int64",
+    "int32"
+  ],
+  "DOLocationID": [
+    "int64",
+    "int32"
+  ]
+}

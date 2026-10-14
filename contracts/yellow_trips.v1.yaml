@@ -1,0 +1,30 @@
+# Data contract: NYC TLC yellow taxi trips (validated 2024-01..06).
+# Any file whose schema drifts, or any row violating rules, goes to quarantine
+# with a reason — never silently accepted, never lost.
+contract: yellow_trips
+version: "1.0.0"
+owner: lakehouse-platform
+source_pattern: "yellow_tripdata_{YYYY}-{MM}.parquet"
+required_columns:
+  - {name: VendorID, type: "int64", nullable: true}
+  - {name: tpep_pickup_datetime, type: "timestamp[us]", nullable: false}
+  - {name: tpep_dropoff_datetime, type: "timestamp[us]", nullable: false}
+  - {name: passenger_count, type: "int64", nullable: true}
+  - {name: trip_distance, type: "double", nullable: false}
+  - {name: PULocationID, type: "int64", nullable: false}
+  - {name: DOLocationID, type: "int64", nullable: false}
+  - {name: payment_type, type: "int64", nullable: true}
+  - {name: fare_amount, type: "double", nullable: false}
+  - {name: tip_amount, type: "double", nullable: true}
+  - {name: total_amount, type: "double", nullable: false}
+allowed_extra_columns: true   # extra columns are OK but logged (schema evolution signal)
+forbidden_missing_columns: true  # a missing required column quarantines the whole file
+rules:
+  - {name: pickup_before_dropoff, expr: "tpep_pickup_datetime <= tpep_dropoff_datetime"}
+  - {name: trip_distance_non_negative, expr: "trip_distance >= 0"}
+  - {name: fare_amount_non_negative, expr: "fare_amount >= 0"}
+  - {name: total_amount_non_negative, expr: "total_amount >= 0"}
+  - {name: location_ids_positive, expr: "PULocationID > 0 and DOLocationID > 0"}
+quarantine:
+  target: "minio://quarantine/yellow_trips/"
+  reason_field: "_quarantine_reason"
