@@ -39,8 +39,10 @@ def main() -> None:
         cols = set(entry["columns"])
         extra = sorted(cols - base)
         missing = sorted(base - cols)
-        print(f"{entry['file']}: rows={entry['rows']} cols={len(cols)} "
-              f"extra_vs_first={extra} missing_vs_first={missing}")
+        print(
+            f"{entry['file']}: rows={entry['rows']} cols={len(cols)} "
+            f"extra_vs_first={extra} missing_vs_first={missing}"
+        )
     # pairwise drift 2019 vs 2024-01
     by_file = {e["file"]: e for e in report}
     old = by_file.get("yellow_tripdata_2019-01.parquet", {})

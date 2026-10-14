@@ -2,22 +2,37 @@ name: ci
 on:
   push:
   pull_request:
+
+env:
+  TERRAFORM_VERSION: 1.16.5
+  HELM_VERSION: v4.3.0
+  KUBECONFORM_VERSION: v0.8.0
+  K8S_VERSION: v1.33.1
+
 jobs:
   lint-test:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Install
+
+      - name: Install Python deps
         run: |
           python -m pip install --upgrade pip
           pip install ruff pytest pyyaml
+
       - name: Ruff
-        run: ruff check src tests
-      - name: Pytest
+        run: ruff check src tests scripts
+
+      - name: Ruff format check
+        run: ruff format --check src tests scripts
+
+      - name: Pytest (Spark tests skip without pyspark; cluster-free)
         run: pytest -q
+
       - name: Terraform fmt/validate
         uses: hashicorp/setup-terraform@v3
         with:
@@ -25,8 +40,38 @@ jobs:
       - run: terraform -chdir=infra/terraform init -backend=false
       - run: terraform -chdir=infra/terraform fmt -check
       - run: terraform -chdir=infra/terraform validate
-      - name: Helm lint
+
+      - name: Helm
         uses: azure/setup-helm@v4
         with:
           version: v4.3.0
-      - run: helm lint infra/helm/minio 2>&1 || echo "no chart yet (Phase 3)"
+      - run: helm repo add argo https://argoproj.github.io/argo-helm
+      - run: helm repo add trino https://trinodb.github.io/charts
+      - run: helm dependency update infra/helm/trino
+      - name: Helm lint
+        run: |
+          for chart in minio postgres lakekeeper spark-jobs trino; do
+            helm lint infra/helm/$chart
+          done
+          # argocd is upstream chart + values file: render check only
+          helm template argocd argo/argo-cd --version 10.10.3 -n argocd \
+            -f infra/helm/argocd/values.yaml > /dev/null
+
+      - name: Render charts
+        run: |
+          mkdir -p /tmp/rendered
+          helm template lakehouse-minio infra/helm/minio > /tmp/rendered/minio.yaml
+          helm template lakehouse-postgres infra/helm/postgres > /tmp/rendered/postgres.yaml
+          helm template lakehouse-lakekeeper infra/helm/lakekeeper > /tmp/rendered/lakekeeper.yaml
+          helm template spark-jobs infra/helm/spark-jobs --set month=2024-01 > /tmp/rendered/spark-jobs.yaml
+          helm template lakehouse-trino infra/helm/trino > /tmp/rendered/trino.yaml
+
+      - name: kubeconform
+        run: |
+          curl -fSL -o /tmp/kubeconform.tar.gz \
+            https://github.com/yannh/kubeconform/releases/download/v0.8.0/kubeconform-linux-amd64.tar.gz
+          tar -xzf /tmp/kubeconform.tar.gz -C /tmp
+          /tmp/kubeconform -kubernetes-version 1.33.1 -ignore-missing-schemas \
+            /tmp/rendered/minio.yaml /tmp/rendered/postgres.yaml \
+            /tmp/rendered/lakekeeper.yaml /tmp/rendered/spark-jobs.yaml \
+            /tmp/rendered/trino.yaml

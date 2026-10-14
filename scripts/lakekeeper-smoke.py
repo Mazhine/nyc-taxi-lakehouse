@@ -24,11 +24,11 @@ TABLE = "yellow_trips"
 def main() -> None:
     """Create namespace/table if missing, record proof JSON."""
     catalog = RestCatalog(
-            name="lakekeeper",
-            uri=CATALOG_URI,
-            warehouse=WAREHOUSE,
-            token="dummy",  # unsecured local deployment only
-        )
+        name="lakekeeper",
+        uri=CATALOG_URI,
+        warehouse=WAREHOUSE,
+        token="dummy",  # unsecured local deployment only
+    )
     existing = [ns for ns in catalog.list_namespaces()]
     if (NAMESPACE,) not in existing:
         catalog.create_namespace(NAMESPACE)

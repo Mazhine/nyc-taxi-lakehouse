@@ -18,9 +18,7 @@ params = {"dataframe": df}
 batch = bdef.get_batch(batch_parameters=params)
 suite = context.suites.add(gx.ExpectationSuite(name="probe_suite"))
 suite.add_expectation(gx.expectations.ExpectColumnValuesToNotBeNull(column="a"))
-suite.add_expectation(
-    gx.expectations.ExpectColumnValuesToBeBetween(column="b", min_value=0)
-)
+suite.add_expectation(gx.expectations.ExpectColumnValuesToBeBetween(column="b", min_value=0))
 result = batch.validate(suite)
 print("success:", result.success)
 print("stats:", result.statistics)

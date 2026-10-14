@@ -64,3 +64,10 @@ Les résumés de phase sont ajoutés à la suite, au fil de l'eau.
 - **Comment ça marche** : `scripts/export-lineage.py` assemble `experiments/phase8_lineage.json` (14 nœuds, 29 arêtes) depuis snapshots, résumés d'ingestion, contrats et quarantaine — que du mesuré.
 - **Comment ça s'assemble** : s'appuie sur le registre `source_file`, les app-ids des snapshots et les motifs de quarantaine des phases précédentes.
 - **À retenir** : (1) petit ensemble qui marche > grand qui plante ; (2) la provenance peut être statique et honnête ; (3) Marquez 0.54.0-Rust = la cible si un jour +4 Gio.
+
+## Phase 9 — CI, documentation, runbook
+- **Rôle** : figer la qualité (tests auto) et rendre le projet réutilisable sans son auteur.
+- **Pourquoi ce choix** : GitHub Actions sans cluster (lint, unit, validate, helm lint, render + kubeconform v0.8.0) ; README avec mesures uniquement mesurées ; runbook avec chaque panne réellement vue.
+- **Comment ça marche** : `scripts/test.ps1` = miroir local de la CI ; `helm template` + kubeconform valident les 5 charts ; `argocd` (pas un chart) est vérifié par rendu upstream.
+- **Comment ça s'assemble** : la CI protège tout le code des phases 0-8 ; la phase 10 rejouera `up.ps1`/`down.ps1` pour valider le runbook.
+- **À retenir** : (1) chart argocd = values seules → pas de `helm lint` ; (2) kubeconform `-ignore-missing-schemas` pour les CR ; (3) `ruff format --check` en CI oblige à formater avant de committer.

@@ -66,9 +66,7 @@ def build_suite(context: gx.DataContext) -> gx.ExpectationSuite:
     suite = context.suites.add(gx.ExpectationSuite(name="yellow_trips"))
     suite.add_expectation(exps.ExpectColumnValuesToNotBeNull(column="tpep_pickup_datetime"))
     suite.add_expectation(exps.ExpectColumnValuesToNotBeNull(column="tpep_dropoff_datetime"))
-    suite.add_expectation(
-        exps.ExpectColumnValuesToBeBetween(column="trip_distance", min_value=0)
-    )
+    suite.add_expectation(exps.ExpectColumnValuesToBeBetween(column="trip_distance", min_value=0))
     suite.add_expectation(exps.ExpectColumnValuesToBeBetween(column="fare_amount", min_value=0))
     suite.add_expectation(exps.ExpectColumnValuesToBeBetween(column="total_amount", min_value=0))
     suite.add_expectation(exps.ExpectColumnValuesToBeBetween(column="PULocationID", min_value=1))
@@ -97,19 +95,31 @@ def main() -> None:
     s3 = minio()
 
     trusted_key = first_parquet_key(s3, "lakehouse", "iceberg/")
-    trusted = sample_frame(s3, "lakehouse", trusted_key, SAMPLE_ROWS_TRUSTED,
-                           ROOT / "data" / "_tmp_quality_trusted.parquet")
+    trusted = sample_frame(
+        s3,
+        "lakehouse",
+        trusted_key,
+        SAMPLE_ROWS_TRUSTED,
+        ROOT / "data" / "_tmp_quality_trusted.parquet",
+    )
     quar_key = first_parquet_key(s3, "quarantine", "yellow_trips/")
-    quar = sample_frame(s3, "quarantine", quar_key, SAMPLE_ROWS_QUARANTINE,
-                        ROOT / "data" / "_tmp_quality_quarantine.parquet")
+    quar = sample_frame(
+        s3,
+        "quarantine",
+        quar_key,
+        SAMPLE_ROWS_QUARANTINE,
+        ROOT / "data" / "_tmp_quality_quarantine.parquet",
+    )
 
     trusted_res = validate(context, suite, "trusted", trusted)
     quar_res = validate(context, suite, "quarantine", quar)
 
-    (EXP / "phase6_gx_trusted.json").write_text(json.dumps(trusted_res, indent=2)[:200000],
-                                                encoding="utf-8")
-    (EXP / "phase6_gx_quarantine.json").write_text(json.dumps(quar_res, indent=2)[:200000],
-                                                   encoding="utf-8")
+    (EXP / "phase6_gx_trusted.json").write_text(
+        json.dumps(trusted_res, indent=2)[:200000], encoding="utf-8"
+    )
+    (EXP / "phase6_gx_quarantine.json").write_text(
+        json.dumps(quar_res, indent=2)[:200000], encoding="utf-8"
+    )
     try:
         context.build_data_docs()
         datadocs = "built (git-ignored)"

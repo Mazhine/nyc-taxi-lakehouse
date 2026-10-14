@@ -17,7 +17,4 @@ def rewrite_data_files_sql(
 
 def expire_snapshots_sql(table: str, retain_last: int = 5) -> str:
     """Return CALL statement expiring old snapshots, keeping N latest."""
-    return (
-        f"CALL catalog.system.expire_snapshots(table => '{table}', "
-        f"retain_last => {retain_last})"
-    )
+    return f"CALL catalog.system.expire_snapshots(table => '{table}', retain_last => {retain_last})"

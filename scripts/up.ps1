@@ -6,6 +6,8 @@ $ErrorActionPreference = "Stop"
 # remote (see docs/DECISIONS.md D10) — meanwhile this script applies the same
 # charts Argo CD will sync, so the source of truth stays the repo.
 $Root = Split-Path $PSScriptRoot -Parent
+# Pick up winget-installed tools without shell restart.
+$env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "User")
 
 function Step([string]$msg) { Write-Host "`n=== $msg ===" }
 

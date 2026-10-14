@@ -1,50 +1,81 @@
 # RUNBOOK
 
-## Prerequisites (Windows 11 + PowerShell)
-- Docker Desktop running (WSL2 backend). Check: `docker info`.
-- Tools: Python 3.12, kubectl, helm, terraform, kind (see README pins).
-- `~/.wslconfig` limiting WSL2 to 20 GB (created in Phase 0).
-- No heavy project running in parallel during benchmarks.
+## 0. One-time machine setup (Windows 11 + PowerShell)
 
-## Start (one command)
+- Install Docker Desktop (WSL2 backend) and start it: `docker info` must work.
+- Install tools (winget, versions in README): `Helm.Helm 4.3.0`,
+  `Hashicorp.Terraform 1.16.5`, `Kubernetes.kind 0.33.0`,
+  `EclipseAdoptium.Temurin.17.JDK`, Python 3.12. Reopen the shell after winget
+  installs so PATH picks them up (scripts also refresh PATH themselves).
+- Cap WSL2 so Windows keeps breathing (project Phase 0 created this):
+  `~/.wslconfig` with `memory=20GB`, `processors=8`, `swap=4GB`.
+- Python env: `python -m venv .venv; .\.venv\Scripts\python -m pip install
+  ruff pytest pyyaml pandas pyarrow boto3 trino great-expectations`
+  (Spark runs in-cluster; host Spark is not required).
+- `Copy-Item .env.example .env` (demo-local credentials, never committed).
+
+## 1. Start (one command)
+
 ```powershell
-.\scripts\up.ps1
+.\scripts\download-data.ps1   # first time only (~500 MB into data/)
+.\scripts\up.ps1              # kind + Argo CD + MinIO + Postgres + Lakekeeper + Trino
 ```
-Runs: Terraform `init/apply` (kind cluster) → Argo CD → MinIO → Postgres →
-Lakekeeper → Trino → smoke checks.
 
-## Stop
+`up.ps1` does: `terraform init/validate/apply` → helm repos → Argo CD 3.5.5 →
+MinIO/postgres/Lakekeeper charts (+ migrate/bootstrap/warehouse Jobs) →
+Trino chart → waits + smoke logs.
+
+## 2. Load data
+
 ```powershell
-.\scripts\down.ps1
+.\.venv\Scripts\python.exe scripts\upload-raw.py     # data/*.parquet -> s3://lakehouse/raw/
+.\scripts\run-ingest.ps1 -Month 2024-01              # repeat 02..06
 ```
-Destroys the kind cluster via Terraform (`terraform destroy -auto-approve`).
-MinIO data lives on a Docker volume and is deleted with the cluster (by design:
-rebuild is from code + re-downloaded TLC files, never from git).
 
-## Tests (no cluster needed)
+Each Job validates against `contracts/yellow_trips.v1.yaml`, appends valid
+rows to `lakekeeper.nyc.yellow_trips`, writes invalid rows to
+`s3://quarantine/yellow_trips/` with `_quarantine_reason`.
+Re-running a month is a no-op (`skipped_already_loaded`).
+Reference table: `src/ingestion/load_zones.py` via `scripts/submit-probe.sh`
+(debug pod only).
+
+## 3. Query / quality / benchmarks
+
 ```powershell
-.\scripts\test.ps1
+.\.venv\Scripts\python.exe scripts\trino-query.py     # Trino on localhost:8080
+.\.venv\Scripts\python.exe scripts\run-quality.py     # GX (needs MinIO on localhost:9000)
+.\.venv\Scripts\python.exe scripts\bench-iceberg.py   # Iceberg demos + timings
+.\.venv\Scripts\python.exe scripts\export-lineage.py  # static provenance
 ```
-`ruff check`, `pytest`, `terraform validate/fmt -check`, `helm lint`, kubeconform.
 
-## Benchmarks
+## 4. Stop / full reset
+
 ```powershell
-.\scripts\bench.ps1
+.\scripts\down.ps1              # terraform destroy (cluster + volumes deleted)
 ```
-Writes raw outputs to `experiments/` (JSON + logs). Medians computed over repeats.
 
-## Data
-```powershell
-.\scripts\download-data.ps1
-```
-Downloads TLC parquet months + zone lookup into `data/` (git-ignored).
+Data is re-downloadable (`download-data.ps1`) and reloadable (`run-ingest.ps1`);
+nothing irreplaceable lives in the cluster. `up.ps1` after `down.ps1` is the
+supported rebuild path (verified in Phase 10).
 
-## Troubleshoot
-| Symptom | Fix |
+## 5. Troubleshoot (all observed on this machine)
+
+| Symptom | Cause / fix |
 |---|---|
-| `docker info` fails | Start Docker Desktop, wait ~60s, retry |
-| kind cluster stuck | `kind delete cluster --name lakehouse`, rerun `up.ps1` |
-| Terraform provider error | `terraform init -upgrade` in `infra/terraform` |
-| MinIO login fails | Check `.env` (copy from `.env.example`), port-forward 9000/9001 |
-| Trino no rows | Check Lakekeeper warehouse + Spark job logs |
-| OOM in WSL2 | Lower Trino/Spark limits, close other apps, check `.wslconfig` |
+| `docker info` fails | Start Docker Desktop, wait ~60 s |
+| `terraform apply` hangs on `kind_cluster` | First pull of the node image (~1 GB); wait, retry |
+| `minio-make-buckets` CrashLoop, then OK | Job raced MinIO startup; backoff retries succeed; chart now waits |
+| `pull access denied for minio/minio` | Upstream images discontinued; we use `pgsty/minio` (D09) |
+| Lakekeeper tag `0.13.5` not found | Tag has a `v` prefix: `v0.13.5` |
+| Spark executors `UnknownHostException: <driver>` | Client-mode driver needs `spark.driver.host=<pod IP>` (chart sets it) |
+| Spark `Unable to create executor due to ./xxx.jar` | `--packages` jars aren't fetchable by K8s executors; jars are baked into `/opt/spark/jars` |
+| Spark executors exit 134 / SIGSEGV in libjvm | Iceberg vectorized reader vs this JVM/VM; `spark.sql.iceberg.vectorization.enabled=false` (D14); Java 17 + ParallelGC |
+| `ModuleNotFoundError: yaml` in spark-runner | `pyyaml` baked into the image (Dockerfile) |
+| Spark `MERGE` into 20 M rows kills executors | By design now: file ledger + append (D13) |
+| `kubectl logs job/...` times out | Failed Job pods get GC'd; re-run via `spark-debug` pod + `scripts/submit-*.sh` |
+| Trino queries fail on S3 | `fs.s3.enabled=true` is required (default false); check NodePort 30080 → host 8080 |
+| RBAC `Forbidden ... deletecollection/patch` | `spark` Role covers pods/services/configmaps/pvc + patch (chart) |
+| `pytest` hangs on Windows | Spark-local tests skip on win32 by design (D12); run them in `apache/spark:3.5.9` container |
+| `helm lint infra/helm/argocd` fails | Not a chart (upstream chart + values); CI renders it instead |
+| Old `spark-debug` pod has stale image/scripts | Delete + recreate after `kind load`; `kubectl cp` fresh scripts |
+| WSL2 eats host RAM | Check `~/.wslconfig` (20 GB); restart Docker Desktop to apply |

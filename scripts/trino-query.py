@@ -14,8 +14,9 @@ PORT = 8080
 
 def run_query(sql: str) -> tuple[list[str], list[list]]:
     """Execute one statement; return (columns, rows as plain lists)."""
-    conn = trino.dbapi.connect(host=HOST, port=PORT, user="lakehouse", catalog="lakehouse",
-                               schema="nyc")
+    conn = trino.dbapi.connect(
+        host=HOST, port=PORT, user="lakehouse", catalog="lakehouse", schema="nyc"
+    )
     cur = conn.cursor()
     cur.execute(sql)
     cols = [d[0] for d in cur.description] if cur.description else []
@@ -30,8 +31,12 @@ def main() -> None:
         sql = path.read_text(encoding="utf-8").strip().rstrip(";")
         cols, rows = run_query(sql)
         out = exp / f"phase5_{path.stem}.json"
-        out.write_text(json.dumps({"sql": sql, "columns": cols, "rows": rows,
-                                   "row_count": len(rows)}, indent=2), encoding="utf-8")
+        out.write_text(
+            json.dumps(
+                {"sql": sql, "columns": cols, "rows": rows, "row_count": len(rows)}, indent=2
+            ),
+            encoding="utf-8",
+        )
         print(f"{path.name} -> {out.name}: {len(rows)} rows")
         for row in rows[:12]:
             print("  ", row)
