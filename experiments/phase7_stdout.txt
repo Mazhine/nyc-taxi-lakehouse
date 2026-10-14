@@ -1,0 +1,17 @@
+﻿evolution: files unchanged = True
+time travel: {'oldest_snapshot': '7492462876101425700', 'latest_snapshot': '4188281640187836848', 'count_at_oldest': 4931, 'count_after_rollback': 4931, 'count_after_restore': 20015099}
+saved phase7_compaction.json
+saved phase7_partitioning.json
+saved phase7_full_vs_incremental.json
+saved phase7_expire.json
+saved phase7_report.json
+{
+  "config": "ok",
+  "schema_evolution": "ok",
+  "time_travel": "ok",
+  "compaction": "ok",
+  "partitioning": "ok",
+  "full_vs_incremental": "ok",
+  "expire_snapshots": "ok",
+  "snapshots_for_reference": "ok"
+}

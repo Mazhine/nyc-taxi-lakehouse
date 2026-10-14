@@ -50,3 +50,10 @@ Les résumés de phase sont ajoutés à la suite, au fil de l'eau.
 - **Comment ça marche** : `scripts/run-quality.py` télécharge un fichier Iceberg + un fichier de quarantaine depuis MinIO, joue 7 expectations (les règles du contrat), écrit les JSON dans `experiments/`, construit les Data Docs en local.
 - **Comment ça s'assemble** : la suite reflète `contracts/yellow_trips.v1.yaml` ; les violations détectées correspondent aux motifs `_quarantine_reason` de la phase 4.
 - **À retenir** : (1) 200 k lignes trusted = 100 %, 20 k quarantaine = échec attendu ; (2) API GX 1.x : `BatchParameters` est un TypedDict, `to_json_dict()` pour sérialiser ; (3) versionner les JSON, pas le HTML.
+
+## Phase 7 — Fonctionnalités Iceberg et benchmarks
+- **Rôle** : démontrer que le format tient ses promesses (évolution, time travel, compaction) avec des chiffres mesurés, pas des slogans.
+- **Pourquoi ce choix** : tout via Trino (stable ici) : `ADD/RENAME COLUMN` sans réécriture, `FOR VERSION AS OF` + `rollback_to_snapshot`, `EXECUTE optimize/expire_snapshots`, CTAS partitionné par mois ; 5 répétitions, médiane + stdev.
+- **Comment ça marche** : `scripts/bench-iceberg.py` enchaîne les étapes et sauve `experiments/phase7_*.json` ; `$files`/`$snapshots` donnent fichiers et octets ; rowcount final = 20 015 099 (données intactes).
+- **Comment ça s'assemble** : travaille sur la table des phases 4-5 ; expire réglé à 1h (D17) pour purger les 7 snapshots de démo ; les chiffres alimentent le tableau README.
+- **À retenir** : (1) compaction 27→2 fichiers, requête 4,97s→3,49s (médianes) ; (2) partitionnement mois : 3,31s→2,38s ; CTAS 20 M lignes = 106s ; (3) time travel + rollback aller-retour vérifiés par comptages.

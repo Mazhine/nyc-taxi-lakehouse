@@ -149,3 +149,13 @@ by picking the most reasonable option and writing it here.
   (contrôle négatif : `fare_amount`, `total_amount` en cause).
 - Rapports versionnés : `experiments/phase6_quality.json` + JSON GX ;
   Data Docs HTML construits en local uniquement (git-ignorés).
+
+## D17 — Rétention d'expire à 1h (démo) + benchmarks via Trino
+- Context: `expire_snapshots` exige retention >= min-retention (défaut 7j) ;
+  tous les benchmarks doivent tourner sur la même machine, mêmes données.
+- Choice: `iceberg.expire-snapshots.min-retention=1h` (et remove-orphan 1h)
+  dans le catalogue Trino — réglage assumé de plateforme démo, pas de prod.
+  Tous les benchmarks via Trino (JVM stable) : compaction (27→2 fichiers),
+  clone partitionné par mois (CTAS), CTAS vs INSERT, time travel + rollback.
+- Mesures: médiane sur 5 répétitions + stdev, fichiers/octets via `$files`,
+  résultats bruts dans `experiments/phase7_*.json`. Rien d'estimé.

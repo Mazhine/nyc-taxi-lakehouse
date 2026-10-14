@@ -1,0 +1,18 @@
+{
+  "full_ctas_2024_01_s": 21.554935299995122,
+  "incremental_insert_2024_02_s": 16.17382809999981,
+  "bench_contents": [
+    [
+      "yellow_tripdata_2024-02",
+      "2966785"
+    ],
+    [
+      "yellow_tripdata_2024-01",
+      "2927000"
+    ]
+  ],
+  "files_bench": {
+    "data_files": 8,
+    "bytes": 190524863
+  }
+}

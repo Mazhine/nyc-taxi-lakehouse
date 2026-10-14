@@ -26,6 +26,8 @@ trino:
       iceberg.catalog.type=rest
       iceberg.rest-catalog.uri=http://lakekeeper.lakehouse.svc.cluster.local:8181/catalog
       iceberg.rest-catalog.warehouse=warehouse
+      iceberg.expire-snapshots.min-retention=1h
+      iceberg.remove-orphan-files.min-retention=1h
       fs.s3.enabled=true
       s3.endpoint=http://minio.lakehouse.svc.cluster.local:9000
       s3.region=us-east-1

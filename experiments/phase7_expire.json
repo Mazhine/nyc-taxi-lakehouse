@@ -1,0 +1,10 @@
+{
+  "snapshots_before": 8,
+  "snapshots_after": 1,
+  "result": [],
+  "expire_s": 2.4727883999876212,
+  "files_now": {
+    "data_files": 2,
+    "bytes": 666996416
+  }
+}
