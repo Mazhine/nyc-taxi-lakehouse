@@ -48,3 +48,20 @@ spec:
     namespace: lakehouse
   syncPolicy:
     automated: {prune: true, selfHeal: true}
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: lakehouse-trino
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/lakehouse-platform/lakehouse-platform.git
+    targetRevision: HEAD
+    path: infra/helm/trino
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: lakehouse
+  syncPolicy:
+    automated: {prune: true, selfHeal: true}

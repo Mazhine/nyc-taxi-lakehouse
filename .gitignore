@@ -41,5 +41,9 @@ Thumbs.db
 .idea/
 *.swp
 
+# Helm (vendor deps locally; keep Chart.lock pinned, ignore fetched tgz)
+infra/helm/*/charts/
+*.tgz
+
 # Docker
 .docker/

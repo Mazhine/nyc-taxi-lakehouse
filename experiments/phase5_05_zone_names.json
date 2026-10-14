@@ -1,0 +1,72 @@
+{
+  "sql": "SELECT z.Zone AS pickup_zone,\n       z.Borough AS borough,\n       COUNT(*) AS trips,\n       ROUND(AVG(t.fare_amount), 2) AS avg_fare\nFROM lakehouse.nyc.yellow_trips t\nJOIN lakehouse.nyc.taxi_zones z ON t.PULocationID = z.location_id\nGROUP BY z.Zone, z.Borough\nORDER BY trips DESC\nLIMIT 10",
+  "columns": [
+    "pickup_zone",
+    "borough",
+    "trips",
+    "avg_fare"
+  ],
+  "rows": [
+    [
+      "Midtown Center",
+      "Manhattan",
+      "941218",
+      "16.45"
+    ],
+    [
+      "Upper East Side South",
+      "Manhattan",
+      "935506",
+      "13.08"
+    ],
+    [
+      "JFK Airport",
+      "Queens",
+      "885773",
+      "63.56"
+    ],
+    [
+      "Upper East Side North",
+      "Manhattan",
+      "870373",
+      "13.63"
+    ],
+    [
+      "Midtown East",
+      "Manhattan",
+      "692674",
+      "15.97"
+    ],
+    [
+      "Times Sq/Theatre District",
+      "Manhattan",
+      "674809",
+      "19.33"
+    ],
+    [
+      "Lincoln Square East",
+      "Manhattan",
+      "656561",
+      "14.37"
+    ],
+    [
+      "Penn Station/Madison Sq West",
+      "Manhattan",
+      "647749",
+      "17.15"
+    ],
+    [
+      "LaGuardia Airport",
+      "Queens",
+      "630920",
+      "43.64"
+    ],
+    [
+      "Upper West Side South",
+      "Manhattan",
+      "576092",
+      "14.41"
+    ]
+  ],
+  "row_count": 10
+}

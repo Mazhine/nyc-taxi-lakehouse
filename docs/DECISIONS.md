@@ -127,3 +127,14 @@ by picking the most reasonable option and writing it here.
 - Coût : lectures Spark plus lentes (mesuré en phase 7, pas estimé).
 - Hypothesis: l'Arrow off-heap du lecteur vectorisé est incompatible avec
   cette JVM sous WSL2/Docker ; à re-tester sur une autre machine.
+
+## D15 — Trino via chart officiel + catalogue lakehouse
+- Context: requêtes SQL sur Iceberg via REST.
+- Choice: chart officiel `trino/trino` **1.44.0** (app **483**) en wrapper local
+  (`infra/helm/trino`, Chart.lock versionné, tgz ignoré) : 1 coordinateur
+  (heap 2G, limites 2cpu/3Gi) + 1 worker (heap 3G, 2cpu/4Gi), NodePort 30080,
+  catalogue `lakehouse` (REST `...:8181/catalog`, warehouse `warehouse`,
+  `fs.s3.enabled=true`, endpoint MinIO in-cluster). Props conformes aux docs
+  Trino 483 (REST catalog + native S3 FS).
+- Résultat: 20 015 099 lignes lues, jointure zones OK. La JVM Trino (image
+  officielle) lit Iceberg sans crash — le SIGSEGV est spécifique à Spark.

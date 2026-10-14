@@ -1,0 +1,55 @@
+{
+  "sql": "SELECT source_file,\n       COUNT(*) AS trips,\n       ROUND(AVG(fare_amount), 2) AS avg_fare,\n       ROUND(AVG(trip_distance), 2) AS avg_distance_mi,\n       ROUND(AVG(total_amount), 2) AS avg_total\nFROM lakehouse.nyc.yellow_trips\nGROUP BY source_file\nORDER BY source_file",
+  "columns": [
+    "source_file",
+    "trips",
+    "avg_fare",
+    "avg_distance_mi",
+    "avg_total"
+  ],
+  "rows": [
+    [
+      "yellow_tripdata_2024-01",
+      "2927000",
+      "18.65",
+      "3.66",
+      "27.45"
+    ],
+    [
+      "yellow_tripdata_2024-02",
+      "2966785",
+      "18.54",
+      "3.87",
+      "27.3"
+    ],
+    [
+      "yellow_tripdata_2024-03",
+      "3523905",
+      "19.27",
+      "4.52",
+      "27.89"
+    ],
+    [
+      "yellow_tripdata_2024-04",
+      "3456486",
+      "19.57",
+      "5.18",
+      "28.29"
+    ],
+    [
+      "yellow_tripdata_2024-05",
+      "3663653",
+      "20.37",
+      "5.29",
+      "29.2"
+    ],
+    [
+      "yellow_tripdata_2024-06",
+      "3477270",
+      "20.09",
+      "5.21",
+      "28.81"
+    ]
+  ],
+  "row_count": 6
+}

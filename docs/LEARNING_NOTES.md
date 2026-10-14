@@ -36,3 +36,10 @@ Les résumés de phase sont ajoutés à la suite, au fil de l'eau.
 - **Comment ça marche** : image `spark-runner` (Spark 3.5.9 + jars Iceberg/S3A sur le classpath, Java 17) ; chaque Job lit `s3a://lakehouse/raw/`, normalise (casse/types), split valide/quarantaine, skip si déjà chargé. 6 mois 2024 ingérés.
 - **Comment ça s'assemble** : écrit dans le warehouse Lakekeeper créé en phase 3 ; Trino (phase 5) lira la même table ; quarantaine relue en phase 6.
 - **À retenir** : (1) 20 015 099 lignes valides + 317 994 en quarantaine (~1,6 %), rejeu 2024-01 = `skipped_already_loaded`, 0 fichier ajouté ; (2) jars `--packages` invisibles aux exécuteurs K8s → les baker dans l'image ; (3) lecteur vectorisé Iceberg = SIGSEGV JVM ici → désactivé et documenté (D14).
+
+## Phase 5 — Trino et requêtes de démonstration
+- **Rôle** : interroger la table Iceberg en SQL sans toucher à Spark.
+- **Pourquoi ce choix** : chart officiel `trino/trino` 1.44.0/app 483 (pas de chart maison), 1 seul worker, catalogue Iceberg REST vers Lakekeeper + S3 natif vers MinIO.
+- **Comment ça marche** : `helm install` (coordinateur + worker), `scripts/trino-query.py` joue `sql/*.sql` via le client Python sur `localhost:8080` et sauve les JSON dans `experiments/phase5_*.json`.
+- **Comment ça s'assemble** : lit le même warehouse que Spark écrit ; la table `nyc.taxi_zones` (265 lignes, chargée par Spark) permet la jointure ; `$snapshots` nourrit la phase 7 (time travel).
+- **À retenir** : (1) 20 015 099 lignes confirmées par deux moteurs ; (2) `fs.s3.enabled=true` est obligatoire (défaut false) ; (3) Trino lit Iceberg sans crash là où Spark-Temurin segfault — preuve par l'exécution.

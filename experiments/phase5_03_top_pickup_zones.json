@@ -1,0 +1,61 @@
+{
+  "sql": "SELECT PULocationID AS zone_id,\n       COUNT(*) AS trips,\n       ROUND(AVG(fare_amount), 2) AS avg_fare\nFROM lakehouse.nyc.yellow_trips\nGROUP BY PULocationID\nORDER BY trips DESC\nLIMIT 10",
+  "columns": [
+    "zone_id",
+    "trips",
+    "avg_fare"
+  ],
+  "rows": [
+    [
+      "161",
+      "941218",
+      "16.45"
+    ],
+    [
+      "237",
+      "935506",
+      "13.08"
+    ],
+    [
+      "132",
+      "885773",
+      "63.56"
+    ],
+    [
+      "236",
+      "870373",
+      "13.63"
+    ],
+    [
+      "162",
+      "692674",
+      "15.97"
+    ],
+    [
+      "230",
+      "674809",
+      "19.33"
+    ],
+    [
+      "142",
+      "656561",
+      "14.37"
+    ],
+    [
+      "186",
+      "647749",
+      "17.15"
+    ],
+    [
+      "138",
+      "630920",
+      "43.64"
+    ],
+    [
+      "239",
+      "576092",
+      "14.41"
+    ]
+  ],
+  "row_count": 10
+}

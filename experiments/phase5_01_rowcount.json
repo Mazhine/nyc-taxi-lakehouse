@@ -1,0 +1,12 @@
+{
+  "sql": "SELECT COUNT(*) AS total_rows FROM lakehouse.nyc.yellow_trips",
+  "columns": [
+    "total_rows"
+  ],
+  "rows": [
+    [
+      "20015099"
+    ]
+  ],
+  "row_count": 1
+}

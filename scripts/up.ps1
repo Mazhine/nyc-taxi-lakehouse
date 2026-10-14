@@ -17,9 +17,10 @@ try {
   terraform apply -auto-approve
 } finally { Pop-Location }
 
-Step "2/5 helm repos"
+Step "2/6 helm repos"
 helm repo add argo https://argoproj.github.io/argo-helm 2>$null | Out-Null
-helm repo update argo 2>$null | Out-Null
+helm repo add trino https://trinodb.github.io/charts 2>$null | Out-Null
+helm repo update 2>$null | Out-Null
 
 Step "3/5 argocd"
 helm upgrade --install argocd argo/argo-cd --version 10.10.3 `
@@ -37,8 +38,14 @@ helm upgrade --install lakehouse-lakekeeper (Join-Path $Root "infra" "helm" "lak
   -n lakehouse
 kubectl -n lakehouse wait --for=condition=ready --timeout=300s pod -l app=lakekeeper
 
-Step "5/5 smoke"
+Step "5/6 trino (official chart 1.44.0, app 483)"
+helm dependency update (Join-Path $Root "infra" "helm" "trino")
+helm upgrade --install lakehouse-trino (Join-Path $Root "infra" "helm" "trino") `
+  -n lakehouse
+kubectl -n lakehouse wait --for=condition=ready --timeout=600s pod -l app.kubernetes.io/instance=lakehouse-trino
+
+Step "6/6 smoke"
 kubectl -n lakehouse get pods
 kubectl -n lakehouse logs job/minio-make-buckets --tail=5
 kubectl -n lakehouse logs job/lakekeeper-bootstrap --tail=3
-Write-Host "`nup: DONE. Trino + jobs land in later phases (scripts still no-op there)."
+Write-Host "`nup: DONE. Data loads (Spark jobs) run separately: see docs/RUNBOOK.md."

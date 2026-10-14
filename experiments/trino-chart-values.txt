@@ -1,0 +1,1826 @@
+﻿# Default values for trino.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+# -- Override resource names to avoid name conflicts when deploying multiple
+# releases in the same namespace.
+# @raw
+# Example:
+# ```yaml
+# coordinatorNameOverride: trino-coordinator-adhoc
+# workerNameOverride: trino-worker-adhoc
+# nameOverride: trino-adhoc
+# fullnameOverride: trino-adhoc
+# ```
+nameOverride:
+fullnameOverride:
+coordinatorNameOverride:
+workerNameOverride:
+
+image:
+  # -- Image registry, defaults to empty, which results in DockerHub usage
+  registry: ""
+  # -- Repository location of the Trino image, typically `organization/imagename`
+  repository: trinodb/trino
+  # -- Image tag, defaults to the Trino release version specified as `appVersion` from Chart.yaml
+  tag: ""
+  # -- Optional digest value of the image specified as `sha256:abcd...`. A specified value overrides `tag`.
+  digest: ""
+  # -- When true, only the content in `repository` is used as image reference
+  useRepositoryAsSoleImageReference: false
+  pullPolicy: IfNotPresent
+
+# -- An optional list of references to secrets in the same namespace to use for pulling images.
+# @raw
+# Example:
+# ```yaml
+# imagePullSecrets:
+#   - name: registry-credentials
+# ```
+imagePullSecrets: []
+
+# -- Images of the containers the chart's [Helm
+# tests](https://helm.sh/docs/topics/chart_tests/) run, so a cluster that pulls
+# through a mirror can run them too. The registry prefix is shared with the
+# Trino image and comes from `image.registry`.
+testImages:
+  # testImages.kubectl -- Used by the graceful shutdown test to watch and delete
+  # a worker pod. It needs a shell, so a distroless image such as
+  # `registry.k8s.io/kubectl` does not work here.
+  kubectl:
+    repository: alpine/kubectl
+    tag: "1.37.1"
+    pullPolicy: IfNotPresent
+  # testImages.postgresql -- Used by the connection test to seed the resource
+  # groups database, so it is only pulled when `resourceGroups.type` is
+  # `properties`.
+  postgresql:
+    repository: postgres
+    tag: "18-alpine"
+    pullPolicy: IfNotPresent
+  # testImages.python -- Used by the JMX test to query the Prometheus targets
+  # the ServiceMonitor produced.
+  python:
+    repository: python
+    tag: "3-slim"
+    pullPolicy: IfNotPresent
+
+server:
+  workers: 2
+  node:
+    # server.node.environment -- Supports templating with `tpl`.
+    environment: production
+    dataDir: /data/trino
+    pluginDir: /usr/lib/trino/plugin
+  log:
+    trino:
+      level: INFO
+  config:
+    path: /etc/trino
+    https:
+      enabled: false
+      port: 8443
+      keystore:
+        path: ""
+    # -- Trino supports multiple [authentication
+    # types](https://trino.io/docs/current/security/authentication-types.html):
+    # PASSWORD, CERTIFICATE, OAUTH2, JWT, KERBEROS, HEADER.
+    authenticationType: ""
+    query:
+      maxMemory: "4GB"
+  exchangeManager: {}
+  # server.exchangeManager -- Mandatory [exchange manager
+  # configuration](https://trino.io/docs/current/admin/fault-tolerant-execution.html#id1).
+  # Used to set the name and location(s) of spooling data storage. For multiple destinations use a list or a comma separated URI locations.
+  # To enable fault-tolerant execution, set the `retry-policy` property in `additionalConfigProperties`.
+  # Additional exchange manager configurations can be added to `additionalExchangeManagerProperties`.
+  # @raw
+  # Example:
+  # ```yaml
+  # server:
+  #   exchangeManager:
+  #     name: "filesystem"
+  #     baseDir:
+  #       - "/tmp/trino-local-file-system-exchange-manager"
+  # additionalConfigProperties:
+  #   - retry-policy=TASK
+  # additionalExchangeManagerProperties:
+  #   - exchange.sink-buffer-pool-min-size=10
+  #   - exchange.sink-buffers-per-partition=2
+  #   - exchange.source-concurrent-readers=4
+  # ```
+
+  workerExtraConfig: ""
+  coordinatorExtraConfig: ""
+  # server.autoscaling -- Configure [Horizontal Pod Autoscaling](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/)
+  # for workers (`server.keda.enabled` must be `false`).
+  autoscaling:
+    enabled: false
+    maxReplicas: 5
+    # -- Target average CPU utilization, represented as a percentage of requested CPU. To disable scaling based on CPU,
+    # set to an empty string.
+    targetCPUUtilizationPercentage: 50
+    # -- Target average memory utilization, represented as a percentage of requested memory. To disable scaling
+    # based on memory, set to an empty string.
+    targetMemoryUtilizationPercentage: 80
+    behavior: {}
+    # server.autoscaling.behavior -- Configuration for scaling up and down.
+    # @raw
+    # Example:
+    # ```yaml
+    #  scaleDown:
+    #    stabilizationWindowSeconds: 300
+    #    policies:
+    #    - type: Percent
+    #      value: 100
+    #      periodSeconds: 15
+    #  scaleUp:
+    #    stabilizationWindowSeconds: 0
+    #    policies:
+    #    - type: Percent
+    #      value: 100
+    #      periodSeconds: 15
+    #    - type: Pods
+    #      value: 4
+    #      periodSeconds: 15
+    #    selectPolicy: Max
+    # ```
+
+  # server.keda -- Configure [Kubernetes Event-driven Autoscaling](https://keda.sh/) for workers
+  # (`server.autoscaling.enabled` must be `false`).
+  keda:
+    enabled: false
+    pollingInterval: 30
+    # -- Period (in seconds) to wait after the last trigger reported active before scaling the resource back to 0
+    cooldownPeriod: 300
+    # -- The delay (in seconds) before the `cooldownPeriod` starts after the initial creation of the `ScaledObject`.
+    initialCooldownPeriod: 0
+    # -- Minimum number of replicas KEDA will scale the resource down to.
+    # By default, itÔÇÖs scale to zero, but you can use it with some other value as well.
+    minReplicaCount: 0
+    # -- This setting is passed to the HPA definition that KEDA will create for a given resource and
+    # holds the maximum number of replicas of the target resource.
+    maxReplicaCount: 5
+    fallback: {}
+    # server.keda.fallback -- Defines a number of replicas to fall back to if a scaler is in an error state.
+    # @raw
+    # Example:
+    # ```yaml
+    # fallback:             # Optional. Section to specify fallback options
+    #   failureThreshold: 3 # Mandatory if fallback section is included
+    #   replicas: 6         # Mandatory if fallback section is included
+    # ```
+    advanced: {}
+    # server.keda.advanced -- Specifies HPA related options
+    # @raw
+    # Example:
+    # ```yaml
+    # advanced:
+    #   horizontalPodAutoscalerConfig:
+    #     behavior:
+    #       scaleDown:
+    #         stabilizationWindowSeconds: 300
+    #         policies:
+    #           - type: Percent
+    #             value: 100
+    #             periodSeconds: 15
+    # ```
+    triggers: []
+    # server.keda.triggers -- List of triggers to activate scaling of the target resource
+    # @raw
+    # Example:
+    # ```yaml
+    # triggers:
+    #   - type: prometheus
+    #     metricType: Value
+    #     metadata:
+    #       serverAddress: "http://prometheus.example.com"
+    #       threshold: "1"
+    #       metricName: required_workers
+    #       query: >-
+    #         sum by (service)
+    #         (avg_over_time(trino_execution_name_ClusterSizeMonitor_RequiredWorkers{service={{ include "trino.fullname" . | quote }}}[5s]))
+    # ```
+    # The metric name above is the one Trino's own OpenMetrics endpoint exports,
+    # which `serviceMonitor` scrapes by default. The `jmx.exporter` sidecar names
+    # the same MBean attribute `trino_execution_ClusterSizeMonitor_RequiredWorkers`,
+    # without the `name_` segment.
+    annotations: {}
+    # server.keda.annotations -- Annotations to apply to the ScaledObject CRD.
+    # @raw
+    # Example:
+    # ```yaml
+    # annotations:
+    #   autoscaling.keda.sh/paused-replicas: "0"
+    #   autoscaling.keda.sh/paused: "true"
+    # ```
+
+accessControl: {}
+# accessControl -- [System access
+# control](https://trino.io/docs/current/security/built-in-system-access-control.html)
+# configuration.
+# @raw
+# These settings apply to the coordinator and to the workers. Settings meant
+# for one role only go in a `coordinator` or a `worker` block, where they
+# override the shared ones.
+# A rules document denies whatever it does not allow, and both roles serve the
+# management endpoints, so a document without a `system_information` section
+# denies every management read, the metrics endpoint among them, on the
+# coordinator and on the workers alike. The rules are evaluated in order and
+# the first one matching a user decides, so a rule that matches a user without
+# granting `read` denies that user as surely as no rule at all.
+# Granting a user read access to system information on workers takes nothing
+# more than:
+# ```yaml
+#  worker:
+#    type: configmap
+#    rules:
+#      rules.json: |-
+#        {
+#          "system_information": [
+#            {
+#              "user": "prometheus",
+#              "allow": ["read"]
+#            }
+#          ]
+#        }
+# ```
+# When `worker.gracefulShutdown` is enabled, the chart merges the permission to
+# write system information for `worker.gracefulShutdown.user` into the worker
+# rules, so the shutdown request keeps working next to the rules configured
+# here. Those rules have to be of the `configmap` type, because the permission
+# cannot be merged into opaque properties.
+# Set the type property to either:
+# * `configmap`, and provide the rule file contents in `rules`,
+# * `properties`, and provide configuration properties in `properties`.
+# Properties example:
+# ```yaml
+# type: properties
+# properties: |
+#     access-control.name=custom-access-control
+#     access-control.custom_key=custom_value
+# ```
+# Config map example:
+# ```yaml
+#  type: configmap
+#  refreshPeriod: 60s
+#  # Rules file is mounted to /etc/trino/access-control
+#  configFile: "rules.json"
+#  rules:
+#    rules.json: |-
+#      {
+#        "catalogs": [
+#          {
+#            "user": "admin",
+#            "catalog": "(mysql|system)",
+#            "allow": "all"
+#          },
+#          {
+#            "group": "finance|human_resources",
+#            "catalog": "postgres",
+#            "allow": true
+#          },
+#          {
+#            "catalog": "hive",
+#            "allow": "all"
+#          },
+#          {
+#            "user": "alice",
+#            "catalog": "postgresql",
+#            "allow": "read-only"
+#          },
+#          {
+#            "catalog": "system",
+#            "allow": "none"
+#          }
+#        ],
+#        "schemas": [
+#          {
+#            "user": "admin",
+#            "schema": ".*",
+#            "owner": true
+#          },
+#          {
+#            "user": "guest",
+#            "owner": false
+#          },
+#          {
+#            "catalog": "default",
+#            "schema": "default",
+#            "owner": true
+#          }
+#        ]
+#      }
+# ```
+
+opa:
+  # -- Set to true to deploy an [Open Policy Agent](https://www.openpolicyagent.org/)
+  # sidecar container on the Trino coordinator pod.
+  # @raw
+  # When `opa.enabled` is true and `accessControl` is left at its default
+  # (empty `{}`), the chart automatically wires Trino's access-control plugin
+  # to this sidecar using `opa.policyPath` and the optional `opa.*Path` /
+  # `opa.log*` / `opa.allowPermissionManagementOperations` values. To
+  # customize further, set `accessControl.type: properties` and provide the
+  # full `accessControl.properties` block; any `accessControl` value disables
+  # auto-wiring.
+  enabled: false
+  # -- OPA container image. The `-static` variant is recommended: it ships
+  # without a shell which keeps the attack surface small. Check for newer
+  # versions at https://hub.docker.com/r/openpolicyagent/opa/tags
+  image: openpolicyagent/opa:1.16.2-static
+  pullPolicy: IfNotPresent
+  # -- Address OPA binds its API to inside the coordinator pod. The default
+  # keeps it on loopback, where Trino reaches it and nothing outside the pod
+  # can: OPA's API is writable and unauthenticated, so a request that arrives
+  # there can replace the policy. The probes use `opa.diagnosticPort` rather
+  # than this address, so there is no need to widen it for them.
+  listenAddress: 127.0.0.1
+  # -- Port OPA listens on inside the coordinator pod. The URIs Trino is given
+  # are built from it, so there is nothing else to keep in step.
+  port: 8181
+  # -- Port of OPA's read-only diagnostic listener, which serves `/health` and
+  # `/metrics` and nothing else. It binds to all addresses so the kubelet can
+  # probe it, which is why the API itself does not have to.
+  diagnosticPort: 8282
+  # -- Path of the document Trino asks for an authorization decision. The
+  # sidecar shares the coordinator's network, so the chart addresses it over
+  # loopback on `opa.port` and only the path is configured here.
+  policyPath: /v1/data/trino/allow
+  # -- Path of the document for column-masking decisions. When set, the
+  # auto-wired access control adds `opa.policy.column-masking-uri`. Leave empty
+  # to omit.
+  columnMaskingPath: ""
+  # -- Path of the document for row-filter decisions. When set, the auto-wired
+  # access control adds `opa.policy.row-filters-uri`. Leave empty to omit.
+  rowFiltersPath: ""
+  # -- Path of the document for batched authorization decisions. When set, the
+  # auto-wired access control adds `opa.policy.batched-uri`. Leave empty to
+  # omit.
+  batchedPath: ""
+  # -- When true, the auto-wired access-control adds `opa.log-requests=true`,
+  # logging every request Trino sends to OPA.
+  logRequests: false
+  # -- When true, the auto-wired access-control adds `opa.log-responses=true`,
+  # logging every response Trino receives from OPA.
+  logResponses: false
+  # -- When true, the auto-wired access-control adds
+  # `opa.allow-permission-management-operations=true`, allowing CREATE/DROP
+  # ROLE, GRANT, REVOKE, and similar statements without OPA evaluation.
+  allowPermissionManagementOperations: false
+  # -- Rego policy files to render into a ConfigMap and mount into the OPA
+  # container at `opa.policyMountPath`. Provide one or more entries, each keyed
+  # by file name (e.g. `policy.rego`, `data.json`). Mutually exclusive with
+  # `opa.policyConfigMap`. Exactly one of the two must be set when
+  # `opa.enabled` is true.
+  # @raw
+  # Example:
+  # ```yaml
+  # policy:
+  #   policy.rego: |
+  #     package trino
+  #     import rego.v1
+  #     default allow := false
+  #     allow if {
+  #       input.context.identity.user == "alice"
+  #     }
+  # ```
+  policy: {}
+  # -- Name of an existing ConfigMap holding the OPA policy files.
+  # Mutually exclusive with `opa.policy`.
+  policyConfigMap: ""
+  # -- Directory inside the OPA container where the policy files are mounted.
+  policyMountPath: /policies
+  # -- Additional flags appended to the `opa run` command, before the policy
+  # directory positional argument.
+  # @raw
+  # Example:
+  # ```yaml
+  # extraArgs:
+  #   - --log-level=debug
+  # ```
+  extraArgs: []
+  # -- [Security
+  # context](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-container)
+  # for the OPA container. Defaults to a hardened, non-root, read-only-root
+  # configuration. Override fields explicitly if your environment requires it.
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 65532
+    runAsGroup: 65532
+    readOnlyRootFilesystem: true
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+    seccompProfile:
+      type: RuntimeDefault
+  # -- Resource requests and limits for the OPA container.
+  # @raw
+  # Set to `{}` to opt out of any resource defaults.
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      memory: 512Mi
+  livenessProbe:
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+    successThreshold: 1
+  readinessProbe:
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+    successThreshold: 1
+
+headerAuthenticator: {}
+# headerAuthenticator -- [Header authenticator](https://trino.io/docs/current/develop/header-authenticator.html)
+# configuration. Required when `server.config.authenticationType` contains `HEADER`.
+# @raw
+# Provide the plugin configuration properties. The `header-authenticator.name` value must
+# match the name of the installed authenticator plugin.
+# ```yaml
+# headerAuthenticator:
+#   properties: |
+#     header-authenticator.name=my-header-authenticator
+#     header-authenticator.username-header=X-Authenticated-User
+# ```
+
+resourceGroups: {}
+# resourceGroups -- [Resource groups control](https://trino.io/docs/current/admin/resource-groups.html)
+# @raw
+# Set the type property to either:
+# * `configmap`, and provide the Resource groups file contents in `resourceGroupsConfig`,
+# * `properties`, and provide configuration properties in `properties`.
+# Properties example:
+# ```yaml
+#  type: properties
+#  properties: |
+#    resource-groups.configuration-manager=db
+#    resource-groups.config-db-url=jdbc:postgresql://trino-postgresql.postgresql.svc.cluster.local:3306/resource_groups
+#    resource-groups.config-db-user=username
+#    resource-groups.config-db-password=password
+# ```
+# Config map example:
+# ```yaml
+#  type: configmap
+#  # Resource groups file is mounted to /etc/trino/resource-groups/resource-groups.json
+#  resourceGroupsConfig: |-
+#      {
+#        "rootGroups": [
+#          {
+#            "name": "global",
+#            "softMemoryLimit": "80%",
+#            "hardConcurrencyLimit": 100,
+#            "maxQueued": 100,
+#            "schedulingPolicy": "fair",
+#            "jmxExport": true,
+#            "subGroups": [
+#              {
+#                "name": "admin",
+#                "softMemoryLimit": "30%",
+#                "hardConcurrencyLimit": 20,
+#                "maxQueued": 10
+#              },
+#              {
+#                "name": "finance_human_resources",
+#                "softMemoryLimit": "20%",
+#                "hardConcurrencyLimit": 15,
+#                "maxQueued": 10
+#              },
+#              {
+#                "name": "general",
+#                "softMemoryLimit": "30%",
+#                "hardConcurrencyLimit": 20,
+#                "maxQueued": 10
+#              },
+#              {
+#                "name": "readonly",
+#                "softMemoryLimit": "10%",
+#                "hardConcurrencyLimit": 5,
+#                "maxQueued": 5
+#              }
+#            ]
+#          }
+#        ],
+#        "selectors": [
+#          {
+#            "user": "admin",
+#            "group": "global.admin"
+#          },
+#          {
+#            "group": "finance|human_resources",
+#            "group": "global.finance_human_resources"
+#          },
+#          {
+#            "user": "alice",
+#            "group": "global.readonly"
+#          },
+#          {
+#            "group": "global.general"
+#          }
+#        ]
+#      }
+# ```
+
+additionalNodeProperties: []
+# additionalNodeProperties -- [Additional node
+# properties](https://trino.io/docs/current/installation/deployment.html#log-levels).
+# Supports templating the entries with `tpl`; an entry that renders empty is omitted.
+# @raw
+# Example, assuming the NODE_ID environment variable has been set:
+# ```yaml
+#  - node.id=${NODE_ID}
+#  - 'node.pool={{ .Values.global.nodePoolId }}'
+# ```
+
+additionalConfigProperties: []
+# additionalConfigProperties -- [Additional config
+# properties](https://trino.io/docs/current/admin/properties.html).
+# Supports templating the entries with `tpl`; an entry that renders empty is omitted.
+# @raw
+# Example:
+# ```yaml
+#  - internal-communication.shared-secret=random-value-999
+#  - http-server.process-forwarded=true
+#  - '{{ if .Values.global.monitoring.enabled }}tracing.enabled=true{{ end }}'
+# ```
+
+additionalLogProperties: []
+# additionalLogProperties -- [Additional log
+# properties](https://trino.io/docs/current/installation/deployment.html#log-levels).
+# Supports templating the entries with `tpl`; an entry that renders empty is omitted.
+# @raw
+# Example:
+# ```yaml
+#  - io.airlift=DEBUG
+#  - 'io.trino.plugin.hive={{ .Values.global.hiveLogLevel }}'
+# ```
+
+additionalExchangeManagerProperties: []
+# additionalExchangeManagerProperties -- [Exchange manager
+# properties](https://trino.io/docs/current/admin/fault-tolerant-execution.html#exchange-manager).
+# Supports templating the entries with `tpl`; an entry that renders empty is omitted.
+# @raw
+# Example:
+# ```yaml
+#  - exchange.s3.region=object-store-region
+#  - exchange.s3.endpoint=your-object-store-endpoint
+#  - exchange.s3.aws-access-key=your-access-key
+#  - exchange.s3.aws-secret-key=your-secret-key
+#  - 'exchange.s3.region={{ .Values.global.objectStoreRegion }}'
+# ```
+
+sessionProperties: {}
+# sessionProperties -- [Session properties manager config
+# file](https://trino.io/docs/current/admin/session-property-managers.html) is
+# mounted to {{ .Values.server.config.path }}/session-property-config.json
+# @raw
+# Set the type property to either:
+# * `configmap`, and provide the session properties manager file contents in `sessionPropertiesConfig`,
+# * `properties`, and provide configuration properties in `properties`.
+
+# Properties example:
+# ```yaml
+# type: properties
+# properties: |
+#   session-property-config.configuration-manager=file
+#   session-property-manager.config-file=/etc/trino/session-property-config.json
+
+# Configmap Example:
+# ```yaml
+# type: configmap
+# sessionPropertiesConfig: |-
+#   [
+#     {
+#       "group": "global.*",
+#       "sessionProperties": {
+#         "query_max_execution_time": "8h"
+#       }
+#     },
+#     {
+#       "group": "global.interactive.*",
+#       "sessionProperties": {
+#         "query_max_execution_time": "1h"
+#       }
+#     },
+#     {
+#       "group": "global.pipeline.*",
+#       "clientTags": ["etl"],
+#       "sessionProperties": {
+#         "scale_writers": "true",
+#         "hive.insert_existing_partitions_behavior": "overwrite"
+#       }
+#     }
+#   ]
+# ```
+
+eventListenerProperties: []
+# eventListenerProperties -- [Event
+# listener](https://trino.io/docs/current/develop/event-listener.html#event-listener)
+# properties. To configure multiple event listeners, add them in
+# `coordinator.additionalConfigFiles` and `worker.additionalConfigFiles`, and
+# set the `event-listener.config-files` property in
+# `additionalConfigProperties` to their locations.
+# Supports templating the entries with `tpl`; an entry that renders empty is
+# omitted, and no event listener file is written when every entry does.
+# @raw
+# Example:
+# ```yaml
+#  - event-listener.name=custom-event-listener
+#  - custom-property1=custom-value1
+#  - custom-property2=custom-value2
+#  - 'custom-property3={{ .Values.global.customValue }}'
+# ```
+
+catalogs:
+  tpch: |
+    connector.name=tpch
+    tpch.splits-per-node=4
+  tpcds: |
+    connector.name=tpcds
+    tpcds.splits-per-node=4
+# catalogs -- Configure
+# [catalogs](https://trino.io/docs/current/installation/deployment.html#catalog-properties).
+# @raw
+# Example:
+# ```yaml
+#  objectstore: |
+#    connector.name=iceberg
+#    iceberg.catalog.type=glue
+#  jmx: |
+#    connector.name=memory
+#  memory: |
+#    connector.name=memory
+#    memory.max-data-per-node=128MB
+# ```
+# Supports templating with `tpl`.
+
+additionalCatalogs: {}
+# additionalCatalogs -- Deprecated, use `catalogs` instead. Configure additional
+# [catalogs](https://trino.io/docs/current/installation/deployment.html#catalog-properties).
+
+env: []
+# env -- additional environment variables added to every pod, specified as a list with explicit values
+# @raw
+# Example:
+# ```yaml
+#  - name: NAME
+#    value: "value"
+# ```
+
+envFrom: []
+# envFrom -- additional environment variables added to every pod, specified as a list of either `ConfigMap`
+# or `Secret` references
+# @raw
+# Example:
+# ```yaml
+#   - secretRef:
+#     name: extra-secret
+# ```
+
+initContainers: {}
+# initContainers -- Additional [containers that run to
+# completion](https://kubernetes.io/docs/concepts/workloads/pods/init-containers/)
+# during pod initialization.
+# @raw
+# Example:
+# ```yaml
+#  coordinator:
+#    - name: init-coordinator
+#      image: busybox:1.28
+#      imagePullPolicy: IfNotPresent
+#      command: ['sh', '-c', "until nslookup myservice.$(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace).svc.cluster.local; do echo waiting for myservice; sleep 2; done"]
+#  worker:
+#    - name: init-worker
+#      image: busybox:1.28
+#      command: ['sh', '-c', 'echo The worker is running! && sleep 3600']
+# ```
+
+sidecarContainers: {}
+# sidecarContainers -- Additional [containers that starts
+# before](https://kubernetes.io/docs/concepts/workloads/pods/sidecar-containers/)
+# the Trino container and continues to run.
+# @raw
+# Example:
+# ```yaml
+#  coordinator:
+#    - name: side-coordinator
+#      image: busybox:1.28
+#      imagePullPolicy: IfNotPresent
+#      command: ['sleep', '1']
+#  worker:
+#    - name: side-worker
+#      image: busybox:1.28
+#      imagePullPolicy: IfNotPresent
+#      command: ['sleep', '1']
+# ```
+
+# -- [Pod security context](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod) configuration.
+# To remove the default, set it to null (or `~`).
+securityContext:
+  runAsUser: 1000
+  runAsGroup: 1000
+
+# -- [Container security context](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-container) configuration.
+containerSecurityContext:
+  # -- Control whether a process can gain more privileges than its parent process.
+  allowPrivilegeEscalation: false
+  capabilities:
+    # -- A list of the Linux kernel capabilities that are dropped from every container. Valid values are listed in
+    # [the capabilities manual page](https://man7.org/linux/man-pages/man7/capabilities.7.html). Ensure # to remove
+    # the "CAP_" prefix which the kernel attaches to the names of permissions.
+    drop:
+      - ALL
+
+shareProcessNamespace:
+  coordinator: false
+  worker: false
+
+service:
+  annotations: {}
+  type: ClusterIP
+  port: 8080
+  # service.nodePort -- The port the service listens on the host, for the `NodePort` type. If not set, Kubernetes will
+  # [allocate a port
+  # automatically](https://kubernetes.io/docs/concepts/services-networking/service/#nodeport-custom-port).
+  nodePort: ""
+  appProtocols: {}
+  # service.appProtocols -- The [application
+  # protocol](https://kubernetes.io/docs/concepts/services-networking/service/#application-protocol) of a service
+  # port, keyed by the name of the port. A service mesh reads it to choose the protocol it speaks to the pods, which
+  # is what keeps an HTTP/2 client from being downgraded to HTTP/1.1. The names of the ports are `http`, `https`,
+  # `jmx-exporter`, and the `name` of every entry in `additionalExposedPorts`. There is no default, because the
+  # right value differs per port: `kubernetes.io/h2c` means cleartext HTTP/2, so it is wrong for a TLS port and for
+  # a port that does not speak HTTP at all.
+  # @raw
+  # Example
+  # ```yaml
+  # appProtocols:
+  #   http: kubernetes.io/h2c
+  #   https: https
+  # ```
+  loadBalancerSourceRanges: []
+  # service.loadBalancerSourceRanges -- The client address ranges allowed to reach the service, for the
+  # `LoadBalancer` type. The cloud provider turns them into the load balancer's own access rules, such as the
+  # security group of an AWS NLB. If empty or not set, the load balancer accepts traffic from anywhere.
+  # @raw
+  # Example
+  # ```yaml
+  # loadBalancerSourceRanges:
+  #   - 1.2.3.4/32
+  #   - 10.0.0.0/8
+  # ```
+  coordinator: {}
+  # service.coordinator -- Override service configurations for the coordinator service.
+  # @raw
+  # Example
+  # ```yaml
+  # coordinator:
+  #   type: LoadBalancer
+  #   annotations:
+  #     external-dns.alpha.kubernetes.io/hostname: trino.example.com
+  # ```
+  worker: {}
+  # service.worker -- Override service configurations for the worker service. The worker service is headless, so
+  # only the settings that apply to a headless service can be overridden. Setting any other one fails the
+  # rendering instead of being silently ignored.
+  # @raw
+  # Example
+  # ```yaml
+  # worker:
+  #   annotations:
+  #     consul.hashicorp.com/service-sync: "false"
+  # ```
+
+auth: {}
+# auth -- Available authentication methods.
+# @raw
+# Use username and password provided as a [password file](https://trino.io/docs/current/security/password-file.html#file-format):
+# ```yaml
+#  passwordAuth: "username:encrypted-password-with-htpasswd"
+# ```
+# Set the name of a secret containing this file in the password.db key
+# ```yaml
+#  passwordAuthSecret: "trino-password-authentication"
+# ```
+# Additionally, set [users' groups](https://trino.io/docs/current/security/group-file.html#file-format):
+# ```yaml
+#  refreshPeriod: 5s
+#  groups: "group_name:user_1,user_2,user_3"
+# ```
+# Set the name of a secret containing this file in the group.db key
+# ```yaml
+#  groupsAuthSecret: "trino-groups-authentication"
+# ```
+
+serviceAccount:
+  # -- Specifies whether a service account should be created
+  create: false
+  # -- The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+  # -- Annotations to add to the service account
+  annotations: {}
+
+configMounts: []
+# configMounts -- Allows mounting additional Trino configuration files from
+# Kubernetes config maps on all nodes.
+# @raw
+# Example:
+# ```yaml
+#  - name: sample-config-mount
+#    configMap: sample-config-map
+#    path: /config-map/sample.json
+#    subPath: sample.json
+# ```
+
+secretMounts: []
+# secretMounts -- Allows mounting additional Trino configuration files from
+# Kubernetes secrets on all nodes.
+# @raw
+# Example:
+# ```yaml
+#  - name: sample-secret
+#    secretName: sample-secret
+#    path: /secrets/sample.json
+#    subPath: sample.json
+# ```
+
+csiSecretMounts: []
+# csiSecretMounts -- Allows mounting secrets on all nodes using the [Secrets
+# Store CSI driver](https://secrets-store-csi-driver.sigs.k8s.io/). Each entry
+# creates a volume of type `secrets-store.csi.k8s.io` referencing a
+# `SecretProviderClass` and a matching volume mount on the Trino container. This
+# enables consuming secrets from external stores (AWS Secrets Manager,
+# HashiCorp Vault, Azure Key Vault, etc.) without first materializing a
+# Kubernetes `Secret`. Requires the driver and its provider to be installed in
+# the cluster, and the `SecretProviderClass` to exist in the release namespace.
+# @raw
+# Example:
+# ```yaml
+#  - name: sample-csi-secret
+#    secretProviderClass: sample-secret-provider-class
+#    path: /secrets/sample.json
+#    subPath: sample.json
+# ```
+
+coordinator:
+  deployment:
+    annotations: {}
+    progressDeadlineSeconds: 600
+    # coordinator.deployment.progressDeadlineSeconds -- The maximum time in seconds for a deployment to make progress before it
+    # is considered failed. The deployment controller continues to
+    # process failed deployments and a condition with a ProgressDeadlineExceeded
+    # reason is surfaced in the deployment status.
+
+    revisionHistoryLimit: 10
+    # coordinator.deployment.revisionHistoryLimit -- The number of old ReplicaSets to retain to allow rollback.
+
+    strategy: {}
+    # coordinator.deployment.strategy -- The deployment strategy to use to replace existing pods with new ones.
+
+  jvm:
+    maxHeapSize: "8G"
+    minHeapSize:
+    maxHeapPercent:
+    # coordinator.jvm.maxHeapPercent -- Alternative method of setting heap size as a percentage of container memory limits, which is recommended for better JVM ergonomics. `maxHeapSize` must be unset for this to work.
+    initialHeapPercent:
+    # coordinator.jvm.initialHeapPercent -- sets the starting heap size as a percentage of container memory limits.
+    #
+    # NOTE: to disable dynamic heap resizing when setting the size as a percent, add `-XX:MaxHeapFreeRatio=100` or `-XX:-UseAdaptiveSizePolicy` to `additionalJVMConfig`.
+    gcMethod:
+      type: "UseG1GC"
+      g1:
+        heapRegionSize: "32M"
+
+  config:
+    memory:
+      heapHeadroomPerNode: ""
+    nodeScheduler:
+      includeCoordinator: false
+      # coordinator.config.nodeScheduler.includeCoordinator -- Allows scheduling work on the coordinator so that a
+      # single machine can function as both coordinator and worker. For large clusters, processing work on the
+      # coordinator can negatively impact query performance because the machine's resources are not available for the
+      # critical coordinator tasks of scheduling, managing, and monitoring query execution.
+    query:
+      maxMemoryPerNode: "1GB"
+
+  additionalJVMConfig: []
+
+  additionalExposedPorts: {}
+  # coordinator.additionalExposedPorts -- Additional ports configured in the coordinator container and the service.
+  # @raw
+  # Example:
+  # ```yaml
+  #  https:
+  #    servicePort: 8443
+  #    name: https
+  #    port: 8443
+  #    nodePort: 30443
+  #    protocol: TCP
+  # ```
+
+  resources: {}
+  # coordinator.resources -- It is recommended not to specify default resources
+  # and to leave this as a conscious choice for the user. This also increases
+  # chances charts run on environments with little resources, such as Minikube.
+  # If you do want to specify resources, use the following example, and adjust
+  # it as necessary.
+  # @raw
+  # Example:
+  # ```yaml
+  #  limits:
+  #    cpu: 100m
+  #    memory: 128Mi
+  #  requests:
+  #    cpu: 100m
+  #    memory: 128Mi
+  # ```
+
+  livenessProbe: {}
+  # coordinator.livenessProbe -- [Liveness
+  # probe](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#configure-probes)
+  # options
+  # @raw
+  # Example:
+  # ```yaml
+  #  initialDelaySeconds: 20
+  #  periodSeconds: 10
+  #  timeoutSeconds: 5
+  #  failureThreshold: 6
+  #  successThreshold: 1
+  # ```
+  readinessProbe: {}
+  # coordinator.readinessProbe -- [Readiness
+  # probe](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#configure-probes)
+  # @raw
+  # Example:
+  # ```yaml
+  #  initialDelaySeconds: 20
+  #  periodSeconds: 10
+  #  timeoutSeconds: 5
+  #  failureThreshold: 6
+  #  successThreshold: 1
+  # ```
+
+  startupProbe: {}
+  # coordinator.startupProbe -- [Startup
+  # probe](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#configure-probes)
+  # @raw
+  # Example:
+  # ```yaml
+  #  initialDelaySeconds: 10
+  #  periodSeconds: 2
+  #  timeoutSeconds: 2
+  #  failureThreshold: 60
+  #  successThreshold: 1
+  # ```
+
+  lifecycle: {}
+  # coordinator.lifecycle -- Coordinator container [lifecycle
+  # events](https://kubernetes.io/docs/tasks/configure-pod-container/attach-handler-lifecycle-event/)
+  # @raw
+  # Example:
+  # ```yaml
+  #  preStop:
+  #    exec:
+  #      command: ["/bin/sh", "-c", "sleep 120"]
+  # ```
+
+  terminationGracePeriodSeconds: 30
+
+  nodeSelector: {}
+
+  tolerations: []
+
+  affinity: {}
+
+  hostAliases: []
+  # coordinator.hostAliases -- [Adding entries to Pod /etc/hosts with HostAliases] (https://kubernetes.io/docs/tasks/network/customize-hosts-file-for-pods/).
+  # @raw
+  # Example:
+  # ```yaml
+  #  - hostnames:
+  #    - name-1
+  #    - name-2
+  #    - name-3
+  #    ip: 1.1.1.1
+  # ```
+
+  additionalConfigFiles: {}
+  # coordinator.additionalConfigFiles -- Additional config files placed in the default configuration directory.
+  # Supports templating the files' contents with `tpl`.
+  # @raw
+  # Example:
+  # ```yaml
+  # secret.txt: |
+  #   secret-value={{- .Values.someValue }}
+  # ```
+
+  additionalVolumes: []
+  # coordinator.additionalVolumes -- One or more additional volumes to add to the coordinator.
+  # @raw
+  # Example:
+  # ```yaml
+  #  - name: extras
+  #    emptyDir: {}
+  # ```
+
+  additionalVolumeMounts: []
+  # coordinator.additionalVolumeMounts -- One or more additional volume mounts to add to the coordinator.
+  # @raw
+  # Example:
+  #  - name: extras
+  #    mountPath: /usr/share/extras
+  #    readOnly: true
+
+  priorityClassName: ~
+
+  annotations: {}
+  # coordinator.annotations -- Annotations to add to the coordinator pod.
+  # @raw
+  # By default, the following annotations are added to the coordinator pod:
+  # - `checksum/access-control-config` - checksum of the coordinator access control config file;
+  # - `checksum/catalog-config` - checksum of the catalog config file;
+  # - `checksum/coordinator-config` - checksum of the coordinator config file.
+  # This allows for automatic rolling updates on configuration changes. This behaviour can be disabled by manually
+  # setting these annotations to fixed constants in the `coordinator.annotations` section.
+  # Example:
+  # ```yaml
+  #  annotations:
+  #    checksum/access-control-config: ""
+  #    checksum/catalog-config: ""
+  #    checksum/coordinator-config: ""
+  # ```
+
+  labels: {}
+
+  configMounts: []
+  # coordinator.configMounts -- Allows mounting additional Trino configuration
+  # files from Kubernetes config maps on the coordinator node.
+  # @raw
+  # Example:
+  # ```yaml
+  #  - name: sample-config-mount
+  #    configMap: sample-config-mount
+  #    path: /config-mount/sample.json
+  #    subPath: sample.json
+  # ```
+
+  secretMounts: []
+  # coordinator.secretMounts -- Allows mounting additional Trino configuration
+  # files from Kubernetes secrets on the coordinator node.
+  # @raw
+  # Example:
+  # ```yaml
+  #  - name: sample-secret
+  #    secretName: sample-secret
+  #    path: /secrets/sample.json
+  #    subPath: sample.json
+  # ```
+
+  csiSecretMounts: []
+  # coordinator.csiSecretMounts -- Allows mounting secrets on the coordinator
+  # node using the [Secrets Store CSI
+  # driver](https://secrets-store-csi-driver.sigs.k8s.io/). Each entry creates a
+  # volume of type `secrets-store.csi.k8s.io` referencing a `SecretProviderClass`
+  # and a matching volume mount on the Trino container. This enables consuming
+  # secrets from external stores (AWS Secrets Manager, HashiCorp Vault, Azure Key
+  # Vault, etc.) without first materializing a Kubernetes `Secret`. Requires the
+  # driver and its provider to be installed in the cluster, and the
+  # `SecretProviderClass` to exist in the release namespace.
+  # @raw
+  # Example:
+  # ```yaml
+  #  - name: sample-csi-secret
+  #    secretProviderClass: sample-secret-provider-class
+  #    path: /secrets/sample.json
+  #    subPath: sample.json
+  # ```
+
+worker:
+  deployment:
+    annotations: {}
+    progressDeadlineSeconds: 600
+    # worker.deployment.progressDeadlineSeconds -- The maximum time in seconds for a deployment to make progress before it
+    # is considered failed. The deployment controller continues to
+    # process failed deployments and a condition with a ProgressDeadlineExceeded
+    # reason is surfaced in the deployment status.
+
+    revisionHistoryLimit: 10
+    # worker.deployment.revisionHistoryLimit -- The number of old ReplicaSets to retain to allow rollback.
+
+    strategy: {}
+    # worker.deployment.strategy -- The deployment strategy to use to replace existing pods with new ones.
+
+  podDisruptionBudget: {}
+  # worker.podDisruptionBudget -- Worker [Pod Disruption
+  # Budget](https://kubernetes.io/docs/concepts/workloads/pods/disruptions/#pod-disruption-budgets)
+  # configuration. The contents are rendered into the budget's `spec`, so any
+  # field the API supports can be set here. Nothing is created while this is
+  # empty.
+  # @raw
+  # ```yaml
+  # podDisruptionBudget:
+  #   # minAvailable and maxUnavailable are mutually exclusive
+  #   minAvailable: 1
+  # ```
+
+  jvm:
+    maxHeapSize: "8G"
+    minHeapSize:
+    maxHeapPercent:
+    # jvm.maxHeapPercent -- Alternative method of setting heap size as a percentage of container memory limits, which is recommended for better JVM ergonomics. `maxHeapSize` must be unset for this to work.
+    initialHeapPercent:
+    # jvm.initialHeapPercent -- sets the starting heap size as a percentage of container memory limits.
+    #
+    # NOTE: to disable dynamic heap resizing when setting the size as a percent, add `-XX:MaxHeapFreeRatio=100` or `-XX:-UseAdaptiveSizePolicy` to `additionalJVMConfig`.
+    gcMethod:
+      type: "UseG1GC"
+      g1:
+        heapRegionSize: "32M"
+
+  config:
+    memory:
+      heapHeadroomPerNode: ""
+    query:
+      maxMemoryPerNode: "1GB"
+
+  additionalJVMConfig: []
+
+  additionalExposedPorts: {}
+  # worker.additionalExposedPorts -- Additional container ports configured in all worker pods and the worker service.
+  # @raw
+  # Example:
+  # ```yaml
+  #  https:
+  #    servicePort: 8443
+  #    name: https
+  #    port: 8443
+  #    protocol: TCP
+  # ```
+
+  resources: {}
+  # worker.resources -- It is recommended not to specify default resources and
+  # to leave this as a conscious choice for the user. This also increases
+  # chances charts run on environments with little resources, such as Minikube.
+  # If you do want to specify resources, use the following example, and adjust
+  # it as necessary.
+  # @raw
+  # Example:
+  # ```yaml
+  #  limits:
+  #    cpu: 100m
+  #    memory: 128Mi
+  #  requests:
+  #    cpu: 100m
+  #    memory: 128Mi
+  # ```
+
+  livenessProbe: {}
+  # worker.livenessProbe -- [Liveness
+  # probe](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#configure-probes)
+  # @raw
+  # Example:
+  # ```yaml
+  #  initialDelaySeconds: 20
+  #  periodSeconds: 10
+  #  timeoutSeconds: 5
+  #  failureThreshold: 6
+  #  successThreshold: 1
+  # ```
+  readinessProbe: {}
+  # worker.readinessProbe -- [Readiness
+  # probe](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#configure-probes)
+  # @raw
+  # Example:
+  # ```yaml
+  #  initialDelaySeconds: 20
+  #  periodSeconds: 10
+  #  timeoutSeconds: 5
+  #  failureThreshold: 6
+  #  successThreshold: 1
+  # ```
+
+  startupProbe: {}
+  # worker.startupProbe -- [Startup
+  # probe](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#configure-probes)
+  # @raw
+  # Example:
+  # ```yaml
+  #  initialDelaySeconds: 10
+  #  periodSeconds: 2
+  #  timeoutSeconds: 2
+  #  failureThreshold: 60
+  #  successThreshold: 1
+  # ```
+
+  lifecycle: {}
+  # worker.lifecycle -- Worker container [lifecycle
+  # events](https://kubernetes.io/docs/tasks/configure-pod-container/attach-handler-lifecycle-event/)
+  #
+  # Setting `worker.lifecycle` conflicts with `worker.gracefulShutdown`.
+  #
+  # @raw
+  # Example:
+  # ```yaml
+  #  preStop:
+  #    exec:
+  #      command: ["/bin/sh", "-c", "sleep 120"]
+  # ```
+
+  gracefulShutdown:
+    enabled: false
+    gracePeriodSeconds: 120
+    user: admin
+  # worker.gracefulShutdown -- Configure [graceful
+  # shutdown](https://trino.io/docs/current/admin/graceful-shutdown.html) in order to ensure that workers terminate
+  # without affecting running queries, given a sufficient grace period. When enabled, the value of
+  # `worker.terminationGracePeriodSeconds` must be at least two times greater than the configured `gracePeriodSeconds`.
+  # Enabling `worker.gracefulShutdown` conflicts with `worker.lifecycle`. When a custom `worker.lifecycle` configuration
+  # needs to be used, graceful shutdown must be configured manually.
+  #
+  # @raw
+  # The shutdown request is sent as `user`, and the chart permits that user to read and write system information in
+  # the worker access control rules, merging the permissions into the rules set in `accessControl`. Read access is
+  # granted as well because the first rule matching a user decides, so a rule granting only write would deny that
+  # user every management read.
+  # Example:
+  # ```yaml
+  #  gracefulShutdown:
+  #    enabled: true
+  #    gracePeriodSeconds: 120
+  #    user: admin
+  # ```
+
+  terminationGracePeriodSeconds: 30
+
+  nodeSelector: {}
+
+  tolerations: []
+
+  affinity: {}
+
+  hostAliases: []
+  # worker.hostAliases -- [Adding entries to Pod /etc/hosts with HostAliases] (https://kubernetes.io/docs/tasks/network/customize-hosts-file-for-pods/).
+  # @raw
+  # Example:
+  # ```yaml
+  #  - hostnames:
+  #    - name-1
+  #    - name-2
+  #    - name-3
+  #    ip: 1.1.1.1
+  # ```
+
+  topologySpreadConstraints: []
+  # worker.topologySpreadConstraints -- Configure [topology spread
+  # constraints](https://kubernetes.io/docs/concepts/scheduling-eviction/topology-spread-constraints/)
+  # to control how worker pods are spread across your cluster among failure-domains
+  # such as nodes, zones, and regions. This is a best practice for achieving high
+  # availability and preventing resource hotspots.
+  #
+  # @raw
+  # Example of spreading workers across hostnames and zones:
+  # ```yaml
+  # topologySpreadConstraints:
+  #   - maxSkew: 1
+  #     topologyKey: "kubernetes.io/hostname"
+  #     whenUnsatisfiable: "ScheduleAnyway"
+  #     labelSelector:
+  #       matchLabels:
+  #         app.kubernetes.io/name: trino
+  #         app.kubernetes.io/component: worker
+  #   - maxSkew: 1
+  #     topologyKey: "topology.kubernetes.io/zone"
+  #     whenUnsatisfiable: "DoNotSchedule"
+  #     labelSelector:
+  #       matchLabels:
+  #         app.kubernetes.io/name: trino
+  #         app.kubernetes.io/component: worker
+  # ```
+
+  additionalConfigFiles: {}
+  # worker.additionalConfigFiles -- Additional config files placed in the default configuration directory.
+  # Supports templating the files' contents with `tpl`.
+  # @raw
+  # Example:
+  # ```yaml
+  # secret.txt: |
+  #   secret-value={{- .Values.someValue }}
+  # ```
+
+  additionalVolumes: []
+  # worker.additionalVolumes -- One or more additional volume mounts to add to all workers.
+  # @raw
+  # Example:
+  # ```yaml
+  #  - name: extras
+  #    emptyDir: {}
+  # ```
+
+  additionalVolumeMounts: []
+  # worker.additionalVolumeMounts -- One or more additional volume mounts to add to all workers.
+  # @raw
+  # Example:
+  # ```yaml
+  #  - name: extras
+  #    mountPath: /usr/share/extras
+  #    readOnly: true
+  # ```
+
+  priorityClassName: ~
+
+  annotations: {}
+  # worker.annotations -- Annotations to add to the worker pods.
+  # @raw
+  # By default, the following annotations are added to the worker pods:
+  # - `checksum/access-control-config` - checksum of the worker access control config file;
+  # - `checksum/catalog-config` - checksum of the catalog config file;
+  # - `checksum/worker-config` - checksum of the worker config file.
+  # This allows for automatic rolling updates on configuration changes. This behaviour can be disabled by manually
+  # setting these annotations to fixed constants in the `worker.annotations` section.
+  # Example:
+  # ```yaml
+  #  annotations:
+  #    checksum/access-control-config: ""
+  #    checksum/catalog-config: ""
+  #    checksum/worker-config: ""
+  # ```
+
+  labels: {}
+
+  configMounts: []
+  # worker.configMounts -- Allows mounting additional Trino configuration
+  # files from Kubernetes config maps on all worker nodes.
+  # @raw
+  # Example:
+  # ```yaml
+  # - name: sample-config-mount
+  #   configMap: sample-config-mount
+  #   path: /config-mount/sample.json
+  #   subPath: sample.json
+  # ```
+
+  secretMounts: []
+  # worker.secretMounts -- Allows mounting additional Trino configuration
+  # files from Kubernetes secrets on all worker nodes.
+  # @raw
+  # Example:
+  # ```yaml
+  #  - name: sample-secret
+  #    secretName: sample-secret
+  #    path: /secrets/sample.json
+  #    subPath: sample.json
+  # ```
+
+  csiSecretMounts: []
+  # worker.csiSecretMounts -- Allows mounting secrets on all worker nodes using
+  # the [Secrets Store CSI
+  # driver](https://secrets-store-csi-driver.sigs.k8s.io/). Each entry creates a
+  # volume of type `secrets-store.csi.k8s.io` referencing a `SecretProviderClass`
+  # and a matching volume mount on the Trino container. This enables consuming
+  # secrets from external stores (AWS Secrets Manager, HashiCorp Vault, Azure Key
+  # Vault, etc.) without first materializing a Kubernetes `Secret`. Requires the
+  # driver and its provider to be installed in the cluster, and the
+  # `SecretProviderClass` to exist in the release namespace.
+  # @raw
+  # Example:
+  # ```yaml
+  #  - name: sample-csi-secret
+  #    secretProviderClass: sample-secret-provider-class
+  #    path: /secrets/sample.json
+  #    subPath: sample.json
+  # ```
+
+kafka:
+  mountPath: "/etc/trino/schemas"
+  tableDescriptions: {}
+  # kafka.tableDescriptions -- Custom kafka table descriptions that will be mounted in mountPath.
+  # @raw
+  # Example:
+  # ```yaml
+  #  testschema.json: |-
+  #    {
+  #      "tableName": "testtable",
+  #      "schemaName": "testschema",
+  #      "topicName": "testtopic",
+  #      "key": {
+  #        "dataFormat": "json",
+  #        "fields": [
+  #          {
+  #            "name": "_key",
+  #            "dataFormat": "VARCHAR",
+  #            "type": "VARCHAR",
+  #            "hidden": "false"
+  #          }
+  #        ]
+  #      },
+  #      "message": {
+  #        "dataFormat": "json",
+  #        "fields": [
+  #          {
+  #            "name": "id",
+  #            "mapping": "id",
+  #            "type": "BIGINT"
+  #          },
+  #          {
+  #            "name": "test_field",
+  #            "mapping": "test_field",
+  #            "type": "VARCHAR"
+  #          }
+  #        ]
+  #      }
+  #    }
+  # ```
+
+jmx:
+  # -- Set to true to enable the RMI server to expose Trino's [JMX metrics](https://trino.io/docs/current/admin/jmx.html).
+  enabled: false
+  registryPort: 9080
+  serverPort: 9081
+  exporter:
+    # jmx.exporter.enabled -- Set to true to run the [JMX
+    # exporter](https://github.com/prometheus/jmx_exporter) as a sidecar and
+    # export JMX metrics over its own HTTP port. Every Trino node already serves
+    # its metrics itself, see `serviceMonitor.openMetrics`, so this is only
+    # needed to keep the exporter's metric names or to reach MBeans the
+    # OpenMetrics endpoint does not expose.
+    enabled: false
+    # jmx.exporter.image -- The upstream project publishes no runnable image, and
+    # `bitnamilegacy` is Bitnami's archived namespace, so this tag receives no
+    # further updates or CVE patches. It stays the default only because a
+    # default has to pull without credentials.
+    # @raw
+    # Prefer `serviceMonitor.openMetrics`, which needs no sidecar at all. If you
+    # do need the sidecar, Docker Hardened Images publishes a maintained
+    # `jmx-exporter` under Apache-2.0 at no cost, and pulling it needs a Docker
+    # account, so it takes an `imagePullSecrets` entry:
+    # ```yaml
+    # imagePullSecrets:
+    #   - name: dhi-credentials
+    # jmx:
+    #   exporter:
+    #     image: dhi.io/jmx-exporter:TAG
+    # ```
+    # Pick a tag from the [catalog
+    # entry](https://hub.docker.com/hardened-images/catalog/dhi/jmx-exporter),
+    # and see [the Docker
+    # documentation](https://docs.docker.com/dhi/how-to/use/) for the
+    # credentials `dhi.io` expects.
+    image: bitnamilegacy/jmx-exporter:1.4.0
+    # jmx.exporter.pullPolicy -- The default tag is pinned to an immutable image
+    # in an archived namespace, so pulling it again on every start would only
+    # make that registry a startup dependency.
+    pullPolicy: IfNotPresent
+    port: 5556
+    env: []
+    # jmx.exporter.env -- environment variables specifically for the JMX exporter container, specified as a list with explicit values
+    envFrom: []
+    # jmx.exporter.envFrom -- environment variables specifically for the JMX exporter container, specified as a list of either `ConfigMap`
+    # or `Secret` references
+    configProperties: ""
+    # jmx.exporter.configProperties -- The string value is templated using `tpl`. The JMX config properties file
+    # is mounted to `/etc/jmx-exporter/jmx-exporter-config.yaml`.
+    # @raw
+    # Example:
+    # ```yaml
+    #  configProperties: |-
+    #     hostPort: localhost:{{- .Values.jmx.registryPort }}
+    #     startDelaySeconds: 0
+    #     ssl: false
+    #     lowercaseOutputName: false
+    #     lowercaseOutputLabelNames: false
+    #     includeObjectNames: ["java.lang:type=Threading"]
+    #     autoExcludeObjectNameAttributes: true
+    #     excludeObjectNameAttributes:
+    #       "java.lang:type=OperatingSystem":
+    #         - "ObjectName"
+    #       "java.lang:type=Runtime":
+    #         - "ClassPath"
+    #         - "SystemProperties"
+    #     rules:
+    #       - pattern: 'java\.lang<type=Threading><(.*)>ThreadCount: (.*)'
+    #         name: java_lang_Threading_ThreadCount
+    #         value: '$2'
+    #         help: 'ThreadCount (java.lang<type=Threading><>ThreadCount)'
+    #         type: UNTYPED
+    # ```
+    securityContext: {}
+    resources: {}
+    # jmx.exporter.resources -- It is recommended not to specify default resources
+    # and to leave this as a conscious choice for the user. This also increases
+    # chances charts run on environments with little resources, such as Minikube.
+    # If you do want to specify resources, use the following example, and adjust
+    # it as necessary.
+    # @raw
+    # Example:
+    # ```yaml
+    #  limits:
+    #    cpu: 100m
+    #    memory: 128Mi
+    #  requests:
+    #    cpu: 100m
+    #    memory: 128Mi
+    # ```
+  coordinator: {}
+  # jmx.coordinator -- Override JMX configurations for the Trino coordinator.
+  # @raw
+  # Example
+  # ```yaml
+  # coordinator:
+  #   enabled: true
+  #   exporter:
+  #     enabled: true
+  #     configProperties: |-
+  #       hostPort: localhost:{{- .Values.jmx.registryPort }}
+  #       startDelaySeconds: 0
+  #       ssl: false
+  # ```
+  worker: {}
+  # jmx.worker -- Override JMX configurations for the Trino workers.
+  # @raw
+  # Example
+  # ```yaml
+  # worker:
+  #   enabled: true
+  #   exporter:
+  #     enabled: true
+  # ```
+
+serviceMonitor:
+  # serviceMonitor.enabled -- Set to true to create resources for the
+  # [prometheus-operator](https://github.com/prometheus-operator/prometheus-operator).
+  enabled: false
+
+  apiVersion: monitoring.coreos.com/v1
+  # serviceMonitor.labels -- Labels for serviceMonitor, so that Prometheus can select it
+  labels:
+    prometheus: kube-prometheus
+  # serviceMonitor.interval -- The serviceMonitor web endpoint interval
+  interval: "30s"
+  # serviceMonitor.scrapeTimeout -- Maximum time to wait for a response.
+  # If empty or not set, uses the Prometheus global default.
+  scrapeTimeout: ""
+  openMetrics:
+    # serviceMonitor.openMetrics.enabled -- Scrape the
+    # [OpenMetrics](https://trino.io/docs/current/admin/openmetrics.html)
+    # endpoint every Trino node serves on its own HTTP port. This needs no
+    # sidecar, and it is the recommended metrics source. The `jmx.exporter`
+    # sidecar is scraped as well whenever a role runs one, so both metric sets
+    # can be collected side by side.
+    # @raw
+    # Trino exports every MBean it registers itself. Add JVM level beans, which
+    # it does not register, with the `openmetrics.jmx-object-names` property in
+    # `additionalConfigProperties`:
+    # ```yaml
+    # additionalConfigProperties:
+    #   - openmetrics.jmx-object-names=java.lang:*
+    # ```
+    enabled: true
+    path: /metrics
+    # serviceMonitor.openMetrics.username -- The Trino user the scrape
+    # authenticates as. Reading `/metrics` is a management read, so a
+    # file-based `accessControl` rule set has to allow this user `read` on
+    # `system_information` or the scrape gets a 403.
+    # @raw
+    # ```yaml
+    # accessControl:
+    #   type: configmap
+    #   rules:
+    #     rules.json: |-
+    #       {"system_information": [{"user": "admin", "allow": ["read"]}]}
+    # ```
+    # `serviceMonitor.worker.enabled` set to `false` stops scraping the workers
+    # if you would rather not grant it there.
+    username: admin
+    # serviceMonitor.openMetrics.password -- The password sent with the
+    # username, on the coordinator alone: only it is given an authentication
+    # type, so a worker rejects a password and rendering fails rather than
+    # leaving you a scrape that cannot authenticate. An empty value sends no
+    # password, which is what an unsecured cluster wants.
+    # @raw
+    # An authentication type Prometheus cannot speak, such as `OAUTH2`, has one
+    # more way out: `management.user` lets management endpoints through without
+    # credentials. It applies to every management endpoint, not just
+    # `/metrics`.
+    # ```yaml
+    # additionalConfigProperties:
+    #   - management.user=prometheus
+    #   - management.user.https-enabled=true
+    # ```
+    password: ""
+    # serviceMonitor.openMetrics.authSecret -- Name of an existing Secret in the
+    # release namespace holding `username` and `password` keys. The chart
+    # creates that Secret from the two values above when this is empty.
+    authSecret: ""
+  tlsConfig: {}
+  # serviceMonitor.tlsConfig -- TLS settings for the scrape, needed when
+  # `server.config.https.enabled` is set and Prometheus cannot verify the
+  # coordinator's certificate. Only the coordinator serves https, so this
+  # reaches its endpoint alone.
+  endpoints: []
+  # serviceMonitor.endpoints -- Describe the scrape yourself instead of letting
+  # the chart derive it. This replaces the generated endpoints entirely, so
+  # nothing else in this block applies to a role that sets it.
+  # @raw
+  # Example:
+  # ```yaml
+  # endpoints:
+  #   - port: http
+  #     path: /metrics
+  #     interval: 30s
+  #     relabelings:
+  #       - action: replace
+  #         replacement: trino-coordinator
+  #         targetLabel: job
+  # ```
+  coordinator: {}
+  # serviceMonitor.coordinator -- Override ServiceMonitor configurations for the Trino coordinator.
+  # @raw
+  # Example
+  # ```yaml
+  # coordinator:
+  #   enabled: true
+  #   labels:
+  #     prometheus: my-prometheus
+  #   openMetrics:
+  #     username: prometheus
+  # ```
+  worker: {}
+  # serviceMonitor.worker -- Override ServiceMonitor configurations for the Trino workers.
+  # @raw
+  # Example
+  # ```yaml
+  # worker:
+  #   enabled: true
+  #   labels:
+  #     prometheus: my-prometheus
+  #   openMetrics:
+  #     enabled: false
+  # ```
+
+# -- Labels that get applied to every resource's metadata
+commonLabels: {}
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts: []
+  # ingress.hosts -- [Ingress
+  # rules](https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-rules).
+  # Supports templating the `host` values with `tpl`.
+  # @raw
+  # Example:
+  # ```yaml
+  #  - host: trino.example.com
+  #    paths:
+  #      - path: /
+  #        pathType: ImplementationSpecific
+  # ```
+  tls: []
+  # ingress.tls -- Ingress
+  # [TLS](https://kubernetes.io/docs/concepts/services-networking/ingress/#tls)
+  # configuration.
+  # Supports templating the `hosts` and `secretName` values with `tpl`.
+  # @raw
+  # Example:
+  # ```yaml
+  #  - secretName: chart-example-tls
+  #    hosts:
+  #      - chart-example.local
+  # ```
+
+gateway:
+  # gateway.enabled -- Set to true to create HTTPRoute resources for [Kubernetes Gateway API](https://gateway-api.sigs.k8s.io/).
+  # The Gateway API is the successor to the Ingress API and provides more advanced routing capabilities.
+  # @raw
+  # > [!NOTE]
+  # > - Requires Gateway API CRDs to be installed in the cluster
+  # > - Not recommended to use together with `ingress.enabled` (choose one or the other)
+  # > - Requires a Gateway resource to be configured separately
+  enabled: false
+  annotations: {}
+  # gateway.annotations -- Annotations to add to the HTTPRoute resource.
+  # @raw
+  # Example:
+  # ```yaml
+  #  gateway.networking.k8s.io/example: "value"
+  # ```
+  parentRefs: []
+  # gateway.parentRefs -- References to the Gateway resources that this HTTPRoute should attach to.
+  # @raw
+  # Example:
+  # ```yaml
+  #  - name: trino-gateway
+  #    namespace: gateway-system
+  #    sectionName: https
+  # ```
+  hostnames: []
+  # gateway.hostnames -- Hostnames to match for routing traffic.
+  # @raw
+  # Example:
+  # ```yaml
+  #  - trino.example.com
+  #  - trino-prod.example.com
+  # ```
+  rules: []
+  # gateway.rules -- HTTPRoute rules for routing traffic to Trino.
+  # Each rule can use either the simplified `path` format for basic routing,
+  # or the full `matches` format for advanced use cases.
+  # @raw
+  # Simple path-based routing example:
+  # ```yaml
+  #  - path:
+  #      type: PathPrefix
+  #      value: /
+  #    filters:
+  #      - type: RequestHeaderModifier
+  #        requestHeaderModifier:
+  #          set:
+  #            - name: X-Forwarded-Proto
+  #              value: https
+  # ```
+  # Advanced matching example with headers:
+  # ```yaml
+  #  - matches:
+  #      - path:
+  #          type: PathPrefix
+  #          value: /ui
+  #        headers:
+  #          - name: X-Custom-Header
+  #            value: custom-value
+  #    filters:
+  #      - type: RequestHeaderModifier
+  #        requestHeaderModifier:
+  #          set:
+  #            - name: X-Forwarded-Proto
+  #              value: https
+  # ```
+
+networkPolicy:
+  # networkPolicy.enabled -- Set to true to enable Trino pod protection with a
+  # [NetworkPolicy](https://kubernetes.io/docs/concepts/services-networking/network-policies/).
+  # By default, the NetworkPolicy will only allow Trino pods to communicate with each other.
+  # @raw
+  # > [!NOTE]
+  # > - NetworkPolicies cannot block the ingress traffic coming directly
+  # > from the Kubernetes node on which the Pod is running,
+  # > and are thus incompatible with services of type `NodePort`.
+  # > - When using NetworkPolicies together with JMX metrics export,
+  # > additional ingress rules might be required to allow metric scraping.
+  enabled: false
+  # networkPolicy.ingress -- Additional ingress rules to apply to the Trino pods.
+  # @raw
+  # Example:
+  # ```yaml
+  #  - from:
+  #      - ipBlock:
+  #          cidr: 172.17.0.0/16
+  #          except:
+  #            - 172.17.1.0/24
+  #      - namespaceSelector:
+  #          matchLabels:
+  #            kubernetes.io/metadata.name: prometheus
+  #      - podSelector:
+  #          matchLabels:
+  #            role: backend-app
+  #    ports:
+  #      - protocol: TCP
+  #        port: 8080
+  #      - protocol: TCP
+  #        port: 5556
+  # ```
+  ingress: []
+  # networkPolicy.egress -- Egress rules to apply to the Trino pods.
+  # @raw
+  # Example:
+  # ```yaml
+  #  - to:
+  #      - podSelector:
+  #          matchLabels:
+  #            role: log-ingestor
+  #    ports:
+  #      - protocol: TCP
+  #        port: 9999
+  # ```
+  egress: []
+
+# extraManifests -- Array of extra kubernetes manifests to deploy with the release.
+# Strings are evaluated as a template and can use template expansions and functions.
+# All other objects are used as yaml.
+extraManifests: []
+  # - |
+  #   apiVersion: v1
+  #   kind: ConfigMap
+  #   metadata:
+  #     name: extra-configmap
+  #   data:
+  #     key: {{ .Values.myCustomValue | quote }}
+

@@ -1,8 +1,9 @@
 #!/bin/bash
-# One-off probe submitter (debugging aid). Args: APP_PY [EXTRA_CONFS...]
+# One-off probe submitter (debugging aid). Args: APP_PY [APP_ARGS...]
 # Not used by automation; infra/helm/spark-jobs is the source of truth.
 set -eu
 APP_PY="${1:-/tmp/distinct.py}"
+shift || true
 DRIVER_IP="$(hostname -i | awk '{print $1}')"
 /opt/spark/bin/spark-submit \
   --master k8s://https://kubernetes.default.svc \
@@ -26,4 +27,4 @@ DRIVER_IP="$(hostname -i | awk '{print $1}')"
   --conf spark.executorEnv.PYSPARK_PYTHON=python3 \
   --conf spark.sql.extensions=org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions \
   --conf spark.sql.iceberg.vectorization.enabled=false \
-  "file://${APP_PY}"
+  "file://${APP_PY}" "$@"
