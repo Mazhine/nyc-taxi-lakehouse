@@ -138,3 +138,14 @@ by picking the most reasonable option and writing it here.
   Trino 483 (REST catalog + native S3 FS).
 - Résultat: 20 015 099 lignes lues, jointure zones OK. La JVM Trino (image
   officielle) lit Iceberg sans crash — le SIGSEGV est spécifique à Spark.
+
+## D16 — Qualité GX 1.24 sur échantillons (pandas), pas sur le cluster
+- Context: GX sur Spark/K8s ou Trino-SQLAlchemy = lourd et fragile ; les reads
+  Iceberg host sont impossibles (DNS cluster).
+- Choice: **great-expectations==1.24.0** (vérifié à la doc du jour), suite
+  `yellow_trips` (7 expectations = règles du contrat), validée sur
+  (a) 200 k lignes d'un fichier Iceberg de confiance téléchargé de MinIO
+  → succès 100 %, (b) 20 k lignes de quarantaine → échec attendu
+  (contrôle négatif : `fare_amount`, `total_amount` en cause).
+- Rapports versionnés : `experiments/phase6_quality.json` + JSON GX ;
+  Data Docs HTML construits en local uniquement (git-ignorés).

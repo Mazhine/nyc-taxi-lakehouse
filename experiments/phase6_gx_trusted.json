@@ -1,0 +1,246 @@
+{
+  "success": true,
+  "results": [
+    {
+      "success": true,
+      "expectation_config": {
+        "type": "expect_column_values_to_not_be_null",
+        "kwargs": {
+          "batch_id": "pandas_trusted-asset_trusted",
+          "column": "tpep_pickup_datetime"
+        },
+        "meta": {},
+        "id": "81116c56-7d55-4c5f-987e-9b7d091b9be5",
+        "severity": "critical"
+      },
+      "result": {
+        "element_count": 200000,
+        "unexpected_count": 0,
+        "unexpected_percent": 0.0,
+        "partial_unexpected_list": [],
+        "partial_unexpected_counts": [],
+        "partial_unexpected_index_list": []
+      },
+      "meta": {},
+      "exception_info": {
+        "raised_exception": false,
+        "exception_traceback": null,
+        "exception_message": null
+      }
+    },
+    {
+      "success": true,
+      "expectation_config": {
+        "type": "expect_column_values_to_not_be_null",
+        "kwargs": {
+          "batch_id": "pandas_trusted-asset_trusted",
+          "column": "tpep_dropoff_datetime"
+        },
+        "meta": {},
+        "id": "8f758ba9-f044-445b-8567-50b4df48c552",
+        "severity": "critical"
+      },
+      "result": {
+        "element_count": 200000,
+        "unexpected_count": 0,
+        "unexpected_percent": 0.0,
+        "partial_unexpected_list": [],
+        "partial_unexpected_counts": [],
+        "partial_unexpected_index_list": []
+      },
+      "meta": {},
+      "exception_info": {
+        "raised_exception": false,
+        "exception_traceback": null,
+        "exception_message": null
+      }
+    },
+    {
+      "success": true,
+      "expectation_config": {
+        "type": "expect_column_values_to_be_between",
+        "kwargs": {
+          "batch_id": "pandas_trusted-asset_trusted",
+          "column": "trip_distance",
+          "min_value": 0.0
+        },
+        "meta": {},
+        "id": "cdd9c60f-aa5f-496c-a8a1-5dc59a2e158f",
+        "severity": "critical"
+      },
+      "result": {
+        "element_count": 200000,
+        "unexpected_count": 0,
+        "unexpected_percent": 0.0,
+        "partial_unexpected_list": [],
+        "missing_count": 0,
+        "missing_percent": 0.0,
+        "unexpected_percent_total": 0.0,
+        "unexpected_percent_nonmissing": 0.0,
+        "partial_unexpected_counts": [],
+        "partial_unexpected_index_list": []
+      },
+      "meta": {},
+      "exception_info": {
+        "raised_exception": false,
+        "exception_traceback": null,
+        "exception_message": null
+      }
+    },
+    {
+      "success": true,
+      "expectation_config": {
+        "type": "expect_column_values_to_be_between",
+        "kwargs": {
+          "batch_id": "pandas_trusted-asset_trusted",
+          "column": "fare_amount",
+          "min_value": 0.0
+        },
+        "meta": {},
+        "id": "49cb84e8-c3f6-424c-b37d-3dbb942b88df",
+        "severity": "critical"
+      },
+      "result": {
+        "element_count": 200000,
+        "unexpected_count": 0,
+        "unexpected_percent": 0.0,
+        "partial_unexpected_list": [],
+        "missing_count": 0,
+        "missing_percent": 0.0,
+        "unexpected_percent_total": 0.0,
+        "unexpected_percent_nonmissing": 0.0,
+        "partial_unexpected_counts": [],
+        "partial_unexpected_index_list": []
+      },
+      "meta": {},
+      "exception_info": {
+        "raised_exception": false,
+        "exception_traceback": null,
+        "exception_message": null
+      }
+    },
+    {
+      "success": true,
+      "expectation_config": {
+        "type": "expect_column_values_to_be_between",
+        "kwargs": {
+          "batch_id": "pandas_trusted-asset_trusted",
+          "column": "total_amount",
+          "min_value": 0.0
+        },
+        "meta": {},
+        "id": "1e60e25b-72c8-4e09-971d-8d13b749e2d9",
+        "severity": "critical"
+      },
+      "result": {
+        "element_count": 200000,
+        "unexpected_count": 0,
+        "unexpected_percent": 0.0,
+        "partial_unexpected_list": [],
+        "missing_count": 0,
+        "missing_percent": 0.0,
+        "unexpected_percent_total": 0.0,
+        "unexpected_percent_nonmissing": 0.0,
+        "partial_unexpected_counts": [],
+        "partial_unexpected_index_list": []
+      },
+      "meta": {},
+      "exception_info": {
+        "raised_exception": false,
+        "exception_traceback": null,
+        "exception_message": null
+      }
+    },
+    {
+      "success": true,
+      "expectation_config": {
+        "type": "expect_column_values_to_be_between",
+        "kwargs": {
+          "batch_id": "pandas_trusted-asset_trusted",
+          "column": "PULocationID",
+          "min_value": 1.0
+        },
+        "meta": {},
+        "id": "bc3c1e76-f017-4130-bde6-8a67524111b7",
+        "severity": "critical"
+      },
+      "result": {
+        "element_count": 200000,
+        "unexpected_count": 0,
+        "unexpected_percent": 0.0,
+        "partial_unexpected_list": [],
+        "missing_count": 0,
+        "missing_percent": 0.0,
+        "unexpected_percent_total": 0.0,
+        "unexpected_percent_nonmissing": 0.0,
+        "partial_unexpected_counts": [],
+        "partial_unexpected_index_list": []
+      },
+      "meta": {},
+      "exception_info": {
+        "raised_exception": false,
+        "exception_traceback": null,
+        "exception_message": null
+      }
+    },
+    {
+      "success": true,
+      "expectation_config": {
+        "type": "expect_column_values_to_be_between",
+        "kwargs": {
+          "batch_id": "pandas_trusted-asset_trusted",
+          "column": "DOLocationID",
+          "min_value": 1.0
+        },
+        "meta": {},
+        "id": "2f1473d4-9bab-4a0e-af6f-21596d67159c",
+        "severity": "critical"
+      },
+      "result": {
+        "element_count": 200000,
+        "unexpected_count": 0,
+        "unexpected_percent": 0.0,
+        "partial_unexpected_list": [],
+        "missing_count": 0,
+        "missing_percent": 0.0,
+        "unexpected_percent_total": 0.0,
+        "unexpected_percent_nonmissing": 0.0,
+        "partial_unexpected_counts": [],
+        "partial_unexpected_index_list": []
+      },
+      "meta": {},
+      "exception_info": {
+        "raised_exception": false,
+        "exception_traceback": null,
+        "exception_message": null
+      }
+    }
+  ],
+  "suite_name": "yellow_trips",
+  "suite_parameters": {},
+  "statistics": {
+    "evaluated_expectations": 7,
+    "successful_expectations": 7,
+    "unsuccessful_expectations": 0,
+    "success_percent": 100.0
+  },
+  "meta": {
+    "great_expectations_version": "1.24.0",
+    "batch_spec": {
+      "batch_data": "PandasDataFrame"
+    },
+    "batch_markers": {
+      "ge_load_time": "20261014T212924.150787Z",
+      "pandas_data_fingerprint": "99e3e0e5f307822d664080ef1d710ba3"
+    },
+    "active_batch_definition": {
+      "datasource_name": "pandas_trusted",
+      "data_connector_name": "fluent",
+      "data_asset_name": "asset_trusted",
+      "batch_identifiers": {
+        "dataframe": "<DATAFRAME>"
+      }
+    }
+  },
+  "id": null
+}

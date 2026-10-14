@@ -41,6 +41,10 @@ Thumbs.db
 .idea/
 *.swp
 
+# GX local project + Data Docs (JSON reports in experiments/ are versioned)
+gx/
+gx_probe/
+
 # Helm (vendor deps locally; keep Chart.lock pinned, ignore fetched tgz)
 infra/helm/*/charts/
 *.tgz

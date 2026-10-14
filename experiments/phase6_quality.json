@@ -1,0 +1,22 @@
+{
+  "suite": "yellow_trips",
+  "expectations": 7,
+  "trusted": {
+    "key": "iceberg/01a13a70-13b8-7c51-bb10-2fe69a49779e/data/00000-13-57ae5071-fd7e-40bf-8b3e-0bf0ac0742de-0-00001.parquet",
+    "rows": 200000,
+    "success": true,
+    "success_percent": 100.0
+  },
+  "quarantine_negative_control": {
+    "key": "yellow_trips/source_file=yellow_tripdata_2024-01/part-00000-13366eec-f1e5-4b50-ae50-ab6a1cff1cd4-c000.snappy.parquet",
+    "rows": 20000,
+    "success": false,
+    "expected_success": false,
+    "failed_columns": [
+      "fare_amount",
+      "total_amount"
+    ]
+  },
+  "datadocs": "built (git-ignored)",
+  "gx_version": "1.24.0"
+}

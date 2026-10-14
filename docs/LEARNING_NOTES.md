@@ -43,3 +43,10 @@ Les résumés de phase sont ajoutés à la suite, au fil de l'eau.
 - **Comment ça marche** : `helm install` (coordinateur + worker), `scripts/trino-query.py` joue `sql/*.sql` via le client Python sur `localhost:8080` et sauve les JSON dans `experiments/phase5_*.json`.
 - **Comment ça s'assemble** : lit le même warehouse que Spark écrit ; la table `nyc.taxi_zones` (265 lignes, chargée par Spark) permet la jointure ; `$snapshots` nourrit la phase 7 (time travel).
 - **À retenir** : (1) 20 015 099 lignes confirmées par deux moteurs ; (2) `fs.s3.enabled=true` est obligatoire (défaut false) ; (3) Trino lit Iceberg sans crash là où Spark-Temurin segfault — preuve par l'exécution.
+
+## Phase 6 — Qualité des données
+- **Rôle** : prouver par un tiers (GX) que la table de confiance est saine et que la quarantaine contient bien les lignes invalides.
+- **Pourquoi ce choix** : Great Expectations 1.24 en local sur échantillons pandas — pas de cluster, pas de SQLAlchemy exotique ; contrôle négatif sur la quarantaine au lieu d'un simple « tout passe ».
+- **Comment ça marche** : `scripts/run-quality.py` télécharge un fichier Iceberg + un fichier de quarantaine depuis MinIO, joue 7 expectations (les règles du contrat), écrit les JSON dans `experiments/`, construit les Data Docs en local.
+- **Comment ça s'assemble** : la suite reflète `contracts/yellow_trips.v1.yaml` ; les violations détectées correspondent aux motifs `_quarantine_reason` de la phase 4.
+- **À retenir** : (1) 200 k lignes trusted = 100 %, 20 k quarantaine = échec attendu ; (2) API GX 1.x : `BatchParameters` est un TypedDict, `to_json_dict()` pour sérialiser ; (3) versionner les JSON, pas le HTML.
