@@ -4,7 +4,8 @@ $ErrorActionPreference = "Stop"
 # Run one incremental idempotent Spark ingest for a month (YYYY-MM) on K8s.
 param([Parameter(Mandatory = $true)][string]$Month)
 $Root = Split-Path $PSScriptRoot -Parent
-$Chart = Join-Path $Root "infra" "helm" "spark-jobs"
+$env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "User")
+$Chart = "$Root/infra/helm/spark-jobs"
 # RBAC once (idempotent)
 helm template spark-rbac $Chart --set month=$Month --show-only templates/rbac.yaml | kubectl apply -f -
 # (Re)create the month job
