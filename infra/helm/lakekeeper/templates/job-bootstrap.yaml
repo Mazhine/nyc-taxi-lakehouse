@@ -1,0 +1,74 @@
+# Bootstrap (once) + warehouse creation (idempotent-ish: fails if warehouse exists,
+# job restartPolicy handles ordering; re-apply keeps the existing warehouse).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: lakekeeper-warehouse-request
+  namespace: lakehouse
+data:
+  create-warehouse.json: |
+    {
+      "warehouse-name": "{{ .Values.warehouseName }}",
+      "project-id": "00000000-0000-0000-0000-000000000000",
+      "storage-profile": {
+        "type": "s3",
+        "bucket": "{{ .Values.s3.bucket }}",
+        "key-prefix": "{{ .Values.s3.keyPrefix }}",
+        "endpoint": "{{ .Values.s3.endpoint }}",
+        "region": "{{ .Values.s3.region }}",
+        "path-style-access": true,
+        "flavor": "s3-compat",
+        "sts-enabled": false
+      },
+      "storage-credential": {
+        "type": "s3",
+        "credential-type": "access-key",
+        "access-key-id": "{{ .Values.s3.accessKeyId }}",
+        "secret-access-key": "{{ .Values.s3.secretAccessKey }}"
+      }
+    }
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: lakekeeper-bootstrap
+  namespace: lakehouse
+  annotations:
+    argocd.argoproj.io/hook: PostSync
+spec:
+  backoffLimit: 20
+  template:
+    spec:
+      restartPolicy: OnFailure
+      volumes:
+        - name: req
+          configMap:
+            name: lakekeeper-warehouse-request
+      containers:
+        - name: bootstrap
+          image: "{{ .Values.curlImage.repository }}:{{ .Values.curlImage.tag }}"
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -eu
+              BASE=http://lakekeeper.lakehouse.svc.cluster.local:8181
+              # wait for server
+              for i in $(seq 1 60); do
+                if curl -fsS "$BASE/management/v1/info" >/dev/null 2>&1; then break; fi
+                sleep 5
+              done
+              # bootstrap once (409/4xx if already done is fine)
+              curl -fsS -X POST "$BASE/management/v1/bootstrap" \
+                -H "Content-Type: application/json" \
+                -d '{"accept-terms-of-use": true}' || echo "bootstrap: already done (or pending)"
+              # create warehouse (4xx if it already exists is fine)
+              curl -fsS -X POST "$BASE/management/v1/warehouse" \
+                -H "Content-Type: application/json" \
+                -d @/req/create-warehouse.json || echo "warehouse: already exists (or pending)"
+              curl -fsS "$BASE/management/v1/warehouse" | head -c 2000; echo
+          volumeMounts:
+            - {name: req, mountPath: /req}
+          resources:
+            requests: {cpu: 50m, memory: 64Mi}
+            limits: {cpu: 250m, memory: 128Mi}

@@ -1,0 +1,28 @@
+# Lakekeeper v0.13.5 (tag WITH leading v — verified by pull 2026-10-14).
+image:
+  repository: quay.io/lakekeeper/catalog
+  tag: v0.13.5
+  digest: sha256:3e68fd708e2aec289ec0b72f6202a517d42fe7995926837e1e63391230b63afc
+curlImage:
+  repository: curlimages/curl
+  tag: 8.12.1
+# Demo-local only. Override with --set (never commit real secrets).
+pgEncryptionKey: lakekeeper-local-demo-encryption-key-32c
+postgres:
+  host: postgres.lakehouse.svc.cluster.local
+  port: 5432
+  database: catalog
+  user: lakekeeper
+  password: lakekeeper-local-demo-only
+s3:
+  endpoint: http://minio.lakehouse.svc.cluster.local:9000
+  bucket: lakehouse
+  keyPrefix: iceberg
+  region: us-east-1
+  accessKeyId: minioadmin
+  secretAccessKey: minioadmin-local-demo-only
+warehouseName: warehouse
+resources:
+  requests: {cpu: 100m, memory: 256Mi}
+  limits: {cpu: 500m, memory: 512Mi}
+nodePort: 30818

@@ -70,3 +70,23 @@ by picking the most reasonable option and writing it here.
 - Context: other projects already cover these; avoid redundancy.
 - Choice: layer names are `raw → validated → trusted` (not bronze/silver/gold);
   batch incremental jobs only; health probes + `kubectl logs` only.
+
+## D09 — MinIO upstream mort, fork pgsty/minio
+- Context: spec asks MinIO. Verified 2026-10-14: upstream archived Feb 2026
+  ("source-only distribution"), `minio/minio` gone from Docker Hub (~Sep 2026,
+  `pull access denied`), `quay.io/minio/minio` 401 for anonymous pulls.
+- Options: (a) build from source (heavy, no CVE backports), (b) SeaweedFS/Garage
+  (not MinIO), (c) community fork with same S3 API/CLI/env.
+- Choice: **pgsty/minio:RELEASE.2026-08-04T00-00-00Z**
+  (digest sha256:b6bfe723…, pull verified) — MinIO-compatible S3 API, same
+  `MINIO_*` vars, `mc`/`mcli` CLI, console :9001. Single 20 Gi volume, buckets
+  `lakehouse` + `quarantine` created by a Job (`mc mb --ignore-existing`).
+- Hypothesis: S3A clients (Spark, Trino, PyIceberg) see no difference.
+
+## D10 — GitOps honnête sans remote
+- Context: Argo CD syncs from Git, but this repo has no remote yet (100 % local).
+- Choice: Argo CD installed with `infra/argocd/*` Application manifests ready;
+  `scripts/up.ps1` applies the SAME charts via Helm in the meantime.
+  No manual `kubectl` hidden: everything is in the repo. Once a remote exists,
+  `kubectl apply -f infra/argocd/root-app.yaml` enables full GitOps sync.
+- Hypothesis: acceptable per rule 6 (no hidden manual config; limitation dite).

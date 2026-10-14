@@ -1,0 +1,5 @@
+apiVersion: v2
+name: postgres
+description: Postgres 16 backend for the Lakekeeper Iceberg REST catalog
+type: application
+version: 0.1.0

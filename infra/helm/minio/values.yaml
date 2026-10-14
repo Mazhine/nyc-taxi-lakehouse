@@ -1,0 +1,19 @@
+# MinIO (pgsty/minio fork — upstream minio/minio images removed from Docker Hub
+# Sep 2026 and quay.io denies anonymous pulls; see docs/DECISIONS.md D09).
+image:
+  repository: pgsty/minio
+  tag: RELEASE.2026-08-04T00-00-00Z
+  digest: sha256:b6bfe7239bfc83fb90d31612d9704d86039dd714f7904b3f1ad68f211e602372
+# Demo-local credentials. Override via --set for any shared use.
+rootUser: minioadmin
+rootPassword: minioadmin-local-demo-only
+buckets:
+  - lakehouse
+  - quarantine
+storageSize: 20Gi
+resources:
+  requests: {cpu: 250m, memory: 512Mi}
+  limits: {cpu: "1", memory: 1Gi}
+nodePorts:
+  api: 30090
+  console: 30091

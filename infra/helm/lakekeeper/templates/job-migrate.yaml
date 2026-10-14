@@ -1,0 +1,29 @@
+# One-off schema migration (mirrors Lakekeeper's own compose: `migrate` before `serve`).
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: lakekeeper-migrate
+  namespace: lakehouse
+  annotations:
+    argocd.argoproj.io/hook: PreSync
+spec:
+  backoffLimit: 8
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: migrate
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}@{{ .Values.image.digest }}"
+          args: ["migrate"]
+          env:
+            - name: LAKEKEEPER__PG_DATABASE_URL_READ
+              value: "postgresql://{{ .Values.postgres.user }}:{{ .Values.postgres.password }}@{{ .Values.postgres.host }}:{{ .Values.postgres.port }}/{{ .Values.postgres.database }}"
+            - name: LAKEKEEPER__PG_DATABASE_URL_WRITE
+              value: "postgresql://{{ .Values.postgres.user }}:{{ .Values.postgres.password }}@{{ .Values.postgres.host }}:{{ .Values.postgres.port }}/{{ .Values.postgres.database }}"
+            - name: LAKEKEEPER__PG_ENCRYPTION_KEY
+              value: {{ .Values.pgEncryptionKey | quote }}
+            - name: RUST_LOG
+              value: info
+          resources:
+            requests: {cpu: 50m, memory: 128Mi}
+            limits: {cpu: 250m, memory: 256Mi}

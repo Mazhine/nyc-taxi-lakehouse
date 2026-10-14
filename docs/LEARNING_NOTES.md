@@ -22,3 +22,10 @@ Les résumés de phase sont ajoutés à la suite, au fil de l'eau.
 - **Comment ça marche** : `terraform apply` crée le cluster kind (1 nœud, ports 9000/9001/8080/8181 mappés) ; `helm install` pose Argo CD 3.5.5 avec réplicas à 1 et limites mémoire explicites.
 - **Comment ça s'assemble** : tout ce qui suit (MinIO, Lakekeeper, Trino) est déployé sur ce cluster ; `scripts/up.ps1` rejoue l'ensemble ; preuves dans `experiments/phase2_cluster.txt`.
 - **À retenir** : (1) kind télécharge l'image nœud (~1 Go) — 1m14 ici ; (2) pas de metrics-server par défaut, `kubectl top` indisponible ; (3) le job d'init Redis reste `Completed`, c'est normal.
+
+## Phase 3 — MinIO, catalogue Iceberg, tables
+- **Rôle** : le socle de données — stockage objet, catalogue qui sait où sont les tables, première table.
+- **Pourquoi ce choix** : MinIO amont étant mort (archivé fév. 2026, images supprimées), fork `pgsty/minio` compatible S3 ; Lakekeeper car binaire unique léger avec Postgres 16 ; charts Helm locaux avec limites explicites.
+- **Comment ça marche** : 3 charts (minio, postgres, lakekeeper) ; Jobs de migration, bootstrap et création du warehouse `warehouse` ; PyIceberg crée le namespace `nyc` et la table `yellow_trips` dont le metadata.json atterrit dans MinIO.
+- **Comment ça s'assemble** : Spark (phase 4) écrit via l'URI REST `...:8181/catalog` + token `dummy` ; Trino (phase 5) lit le même warehouse ; quarantaine = bucket dédié.
+- **À retenir** : (1) tag Lakekeeper = `v0.13.5` avec `v`, pas `0.13.5` ; (2) Jobs K8s avec retry = idempotence d'infra ; (3) preuves dans `experiments/phase3_catalog.json`.

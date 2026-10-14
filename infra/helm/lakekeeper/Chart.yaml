@@ -1,0 +1,5 @@
+apiVersion: v2
+name: lakekeeper
+description: Lakekeeper Iceberg REST catalog (Rust single binary) + bootstrap jobs
+type: application
+version: 0.1.0

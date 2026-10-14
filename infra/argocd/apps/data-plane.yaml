@@ -1,0 +1,50 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: lakehouse-minio
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/lakehouse-platform/lakehouse-platform.git
+    targetRevision: HEAD
+    path: infra/helm/minio
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: lakehouse
+  syncPolicy:
+    automated: {prune: true, selfHeal: true}
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: lakehouse-postgres
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/lakehouse-platform/lakehouse-platform.git
+    targetRevision: HEAD
+    path: infra/helm/postgres
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: lakehouse
+  syncPolicy:
+    automated: {prune: true, selfHeal: true}
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: lakehouse-lakekeeper
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/lakehouse-platform/lakehouse-platform.git
+    targetRevision: HEAD
+    path: infra/helm/lakekeeper
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: lakehouse
+  syncPolicy:
+    automated: {prune: true, selfHeal: true}

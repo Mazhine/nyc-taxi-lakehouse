@@ -1,0 +1,39 @@
+# Buckets + access configured by code (Job, idempotent via --ignore-existing).
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: minio-make-buckets
+  namespace: lakehouse
+  annotations:
+    argocd.argoproj.io/hook: PostSync
+spec:
+  backoffLimit: 5
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: mc
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}@{{ .Values.image.digest }}"
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -eu
+              MC="$(command -v mc || command -v mcli)"
+              for i in $(seq 1 60); do
+                if "$MC" alias set local http://minio.lakehouse.svc.cluster.local:9000 "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD" >/dev/null 2>&1; then break; fi
+                sleep 5
+              done
+              "$MC" alias set local http://minio.lakehouse.svc.cluster.local:9000 "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD"
+              {{- range .Values.buckets }}
+              "$MC" mb --ignore-existing local/{{ . }}
+              {{- end }}
+              "$MC" ls local
+          env:
+            - name: MINIO_ROOT_USER
+              valueFrom: {secretKeyRef: {name: minio-creds, key: root-user}}
+            - name: MINIO_ROOT_PASSWORD
+              valueFrom: {secretKeyRef: {name: minio-creds, key: root-password}}
+          resources:
+            requests: {cpu: 50m, memory: 64Mi}
+            limits: {cpu: 250m, memory: 128Mi}

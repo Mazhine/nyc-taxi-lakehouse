@@ -1,0 +1,12 @@
+image:
+  repository: postgres
+  tag: 16.9-bookworm
+  digest: "" # resolved at deploy time; pgdg tags are immutable per release
+database: catalog
+user: lakekeeper
+# Demo-local only. Override with --set password=... (never commit real secrets).
+password: lakekeeper-local-demo-only
+storageSize: 5Gi
+resources:
+  requests: {cpu: 100m, memory: 256Mi}
+  limits: {cpu: 500m, memory: 512Mi}
