@@ -27,6 +27,8 @@ infra/terraform/*.tfvars
 # Kube / local
 kubeconfig*
 *.kubeconfig
+*-config
+infra/terraform/lakehouse-config
 
 # Experiments outputs are versioned (small text/json only); no binaries
 experiments/*.parquet

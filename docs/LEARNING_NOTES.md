@@ -15,3 +15,10 @@ Les résumés de phase sont ajoutés à la suite, au fil de l'eau.
 - **Comment ça marche** : `scripts/download-data.ps1` télécharge 8 Parquets + zones ; `scripts/inspect-tlc.py` écrit `experiments/tlc_schema_report.json` ; contrat YAML + quarantaine testés par pytest ; Terraform `validate/fmt` verts.
 - **Comment ça s'assemble** : `data/` (ignoré par git) nourrit l'ingestion Spark ; le contrat `yellow_trips.v1.yaml` pilote validation et quarantaine des phases 4/6.
 - **À retenir** : (1) dérive réelle mesurée : `airport_fee` → `Airport_fee`, VendorID int64→int32, passenger_count double→int64, 31 M lignes / 500 Mo ; (2) YAML flow + crochets = quoter les types ; (3) 9 tests verts (contrats, quarantaine, idempotence).
+
+## Phase 2 — Cluster Kubernetes + Argo CD
+- **Rôle** : une fondation K8s reproductible en une commande, avec déploiement GitOps.
+- **Pourquoi ce choix** : kind plutôt que k3d = juste Docker, provider Terraform `tehcyx/kind` 0.9.0 ; Argo CD pour sync auto depuis Git, santé visible.
+- **Comment ça marche** : `terraform apply` crée le cluster kind (1 nœud, ports 9000/9001/8080/8181 mappés) ; `helm install` pose Argo CD 3.5.5 avec réplicas à 1 et limites mémoire explicites.
+- **Comment ça s'assemble** : tout ce qui suit (MinIO, Lakekeeper, Trino) est déployé sur ce cluster ; `scripts/up.ps1` rejoue l'ensemble ; preuves dans `experiments/phase2_cluster.txt`.
+- **À retenir** : (1) kind télécharge l'image nœud (~1 Go) — 1m14 ici ; (2) pas de metrics-server par défaut, `kubectl top` indisponible ; (3) le job d'init Redis reste `Completed`, c'est normal.

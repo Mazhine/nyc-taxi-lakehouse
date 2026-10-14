@@ -1,0 +1,13 @@
+Phase 2 — cluster + Argo CD, 2026-10-14 (real run)
+- terraform apply: 1 added (kind_cluster.lakehouse), 1m14s, id=lakehouse-
+- kubectl: server v1.33.1, client v1.34.1; node lakehouse-control-plane Ready
+  (Debian 12 bookworm, kernel 6.6.87.2-microsoft-standard-WSL2, containerd 2.1.1)
+- Metrics API not available (no metrics-server on kind default) — expected.
+- helm install argocd argo/argo-cd 10.10.3 (app quay.io/argoproj/argocd:v3.5.5),
+  namespace argocd, values infra/helm/argocd/values.yaml
+- All 7 pods Running: application-controller, applicationset-controller (128Mi/256Mi),
+  dex-server (chart defaults), notifications-controller (chart defaults),
+  redis (128Mi/256Mi), repo-server (256Mi/512Mi), server (256Mi/512Mi, available)
+- Note: dex + notifications-controller keep chart-default resources ( tightening them
+  is a documented follow-up; data-plane limits are enforced in Phases 3-5).
+- Port mappings (terraform): host 9000/9001 MinIO, 8080 Trino, 8181 Lakekeeper.

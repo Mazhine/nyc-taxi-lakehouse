@@ -1,0 +1,18 @@
+# Root Argo CD Application: syncs infra/argocd/apps/* (app-of-apps).
+# Applied in Phase 2 after `helm install argocd`.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: lakehouse-root
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/lakehouse-platform/lakehouse-platform.git
+    targetRevision: HEAD
+    path: infra/argocd/apps
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated: {prune: true, selfHeal: true}
