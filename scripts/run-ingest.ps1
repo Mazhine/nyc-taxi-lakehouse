@@ -2,7 +2,9 @@
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 # Run one incremental idempotent Spark ingest for a month (YYYY-MM) on K8s.
-param([Parameter(Mandatory = $true)][string]$Month)
+# Usage: .\scripts\run-ingest.ps1 2024-01
+$Month = $args[0]
+if (-not $Month) { throw "Usage: run-ingest.ps1 <YYYY-MM>" }
 $Root = Split-Path $PSScriptRoot -Parent
 $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "User")
 $Chart = "$Root/infra/helm/spark-jobs"

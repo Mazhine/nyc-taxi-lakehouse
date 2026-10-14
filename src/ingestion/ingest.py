@@ -282,7 +282,7 @@ def main(argv: list[str] | None = None) -> int:
     """Entry point."""
     args = parse_args(argv)
     summary = run(args)
-    print(json.dumps(summary, indent=2))
+    print(json.dumps(summary, indent=2), flush=True)
     return 0
 
 

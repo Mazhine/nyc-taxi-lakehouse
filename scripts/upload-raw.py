@@ -1,4 +1,4 @@
-"""Upload local TLC parquet files to MinIO raw/ prefix (host -> localhost:9000)."""
+"""Upload local TLC files to MinIO raw/ prefix (host -> localhost:9000)."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ PREFIX = "raw/"
 
 
 def main() -> None:
-    """Upload data/*.parquet to s3://lakehouse/raw/ (skip if same size exists)."""
+    """Upload data/*.parquet + taxi_zone_lookup.csv (skip if same size)."""
     s3 = boto3.client(
         "s3",
         endpoint_url=ENDPOINT,
@@ -21,7 +21,9 @@ def main() -> None:
         aws_secret_access_key="minioadmin-local-demo-only",
         region_name="us-east-1",
     )
-    for local in sorted((ROOT / "data").glob("yellow_tripdata_*.parquet")):
+    patterns = ["yellow_tripdata_*.parquet", "taxi_zone_lookup.csv"]
+    files = sorted(f for pat in patterns for f in (ROOT / "data").glob(pat))
+    for local in files:
         key = PREFIX + local.name
         try:
             head = s3.head_object(Bucket=BUCKET, Key=key)
@@ -30,7 +32,7 @@ def main() -> None:
                 continue
         except Exception:
             pass
-        print(f"uploading {local.name} ({local.stat().st_size / 1e6:.0f} MB) ...")
+        print(f"uploading {local.name} ({local.stat().st_size / 1e6:.1f} MB) ...")
         s3.upload_file(str(local), BUCKET, key)
     print("done.")
 

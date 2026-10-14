@@ -1,0 +1,19 @@
+Phase 10 rebuild verification (2026-10-14, ~21:45-22:10 UTC):
+- BEFORE: 1 kind node (9h), 6 helm releases, 20,015,099 trusted rows.
+- DOWN: .\scripts\down.ps1 (fixed PS5.1 Join-Path bug found by this phase) ->
+  terraform destroy OK (12s) -> `kind get clusters`: none; `docker ps`: empty.
+- UP run 1 (logged experiments/phase10_up.log): steps 1-5 green from zero
+  (cluster, argocd, minio, postgres, lakekeeper, trino coord+worker);
+  step 6 aborted on `docker build` ONLY because of the outer `2>&1 | Out-File`
+  logging (native stderr + $ErrorActionPreference Stop). Script itself correct.
+- UP run 2 (plain invocation, no redirect): all 7 steps green, incl. image
+  build (cached), kind load, spark RBAC, lakekeeper bootstrap + fresh
+  nyc.yellow_trips table (created_now=true, new UUID).
+- DATA reloaded: upload-raw (8 parquet + zones CSV after upload-raw fix),
+  6x run-ingest (positional arg after param() fix) -> all "appended".
+- PROOF: trino-query re-run -> phase5_01/02/03/05 JSONs byte-identical to
+  pre-teardown (git diff empty); rowcount 20,015,099; 6 fresh snapshots;
+  zone join works (Midtown Center 941,218).
+- Fixes from this phase: down.ps1/run-ingest.ps1/up.ps1 Join-Path (PS5.1),
+  upload-raw.py now includes taxi_zone_lookup.csv, flush=True on Spark prints,
+  RUNBOOK logging caveat.

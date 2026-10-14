@@ -71,3 +71,10 @@ Les résumés de phase sont ajoutés à la suite, au fil de l'eau.
 - **Comment ça marche** : `scripts/test.ps1` = miroir local de la CI ; `helm template` + kubeconform valident les 5 charts ; `argocd` (pas un chart) est vérifié par rendu upstream.
 - **Comment ça s'assemble** : la CI protège tout le code des phases 0-8 ; la phase 10 rejouera `up.ps1`/`down.ps1` pour valider le runbook.
 - **À retenir** : (1) chart argocd = values seules → pas de `helm lint` ; (2) kubeconform `-ignore-missing-schemas` pour les CR ; (3) `ruff format --check` en CI oblige à formater avant de committer.
+
+## Phase 10 — Vérification finale : tout raser, tout reconstruire
+- **Rôle** : prouver que la plateforme se reconstruit en une commande, pas en théorie.
+- **Pourquoi ce choix** : `down.ps1` (terraform destroy) puis `up.ps1` (7 étapes idempotentes) puis rechargement scripté ; comparaison `git diff` des résultats Trino avant/après.
+- **Comment ça marche** : destroy vérifié (plus de cluster, plus de conteneurs) ; rebuild : cluster, Argo CD, MinIO, Postgres, Lakekeeper, Trino, image Spark + RBAC, namespace/table ; reload : upload-raw + 6 Jobs + zones ; rowcount final.
+- **Comment ça s'assemble** : valide tous les scripts et le runbook de bout en bout ; preuves dans `experiments/phase10_*.txt`.
+- **À retenir** : (1) la phase 10 a trouvé 3 vrais bugs (Join-Path PS 5.1, CSV zones oublié, `param()` capricieux) ; (2) `2>&1 | Out-File` + `Stop` fait avorter sur le stderr natif — lancer plain ou `Start-Transcript` ; (3) résultats post-rebuild identiques à l'octet : 20 015 099 lignes.

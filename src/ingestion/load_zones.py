@@ -57,14 +57,14 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if spark.catalog.tableExists(args.table):
             n = spark.table(args.table).count()
-            print(f"zones table exists with {n} rows: skip")
+            print(f"zones table exists with {n} rows: skip", flush=True)
             return 0
         df = spark.read.option("header", "true").csv(args.input)
         df = df.withColumnRenamed("LocationID", "location_id").withColumn(
             "location_id", F.col("location_id").cast("bigint")
         )
         df.writeTo(args.table).create()
-        print(f"zones table created with {df.count()} rows")
+        print(f"zones table created with {df.count()} rows", flush=True)
         return 0
     finally:
         spark.stop()

@@ -29,7 +29,7 @@ Trino chart → waits + smoke logs.
 
 ```powershell
 .\.venv\Scripts\python.exe scripts\upload-raw.py     # data/*.parquet -> s3://lakehouse/raw/
-.\scripts\run-ingest.ps1 -Month 2024-01              # repeat 02..06
+.\scripts\run-ingest.ps1 2024-01                    # positional month arg; repeat 02..06
 ```
 
 Each Job validates against `contracts/yellow_trips.v1.yaml`, appends valid
@@ -76,6 +76,8 @@ supported rebuild path (verified in Phase 10).
 | Trino queries fail on S3 | `fs.s3.enabled=true` is required (default false); check NodePort 30080 → host 8080 |
 | RBAC `Forbidden ... deletecollection/patch` | `spark` Role covers pods/services/configmaps/pvc + patch (chart) |
 | `pytest` hangs on Windows | Spark-local tests skip on win32 by design (D12); run them in `apache/spark:3.5.9` container |
+| `run-ingest.ps1 -Month x` fails on `param()` | Use positional arg: `run-ingest.ps1 2024-01` (PS 5.1 parsing quirk on some hosts) |
+| `up.ps1 ... 2>&1 | Out-File` aborts at docker build | PS 5.1 turns native stderr into terminating errors under `Stop`; run plainly or use `Start-Transcript` for logging |
 | `helm lint infra/helm/argocd` fails | Not a chart (upstream chart + values); CI renders it instead |
 | Old `spark-debug` pod has stale image/scripts | Delete + recreate after `kind load`; `kubectl cp` fresh scripts |
 | WSL2 eats host RAM | Check `~/.wslconfig` (20 GB); restart Docker Desktop to apply |

@@ -60,7 +60,8 @@ def main(argv: list[str] | None = None) -> int:
                     "by_source": [{r["source_file"]: r["n"]} for r in by_src],
                 },
                 indent=2,
-            )
+            ),
+            flush=True,
         )
         return 0
     finally:
