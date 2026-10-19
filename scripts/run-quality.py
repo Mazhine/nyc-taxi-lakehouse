@@ -1,9 +1,14 @@
 """Data quality gates: Great Expectations suite on trusted + quarantine samples.
 
-- Trusted sample: one Iceberg data file from MinIO (valid rows only) -> expect SUCCESS.
-- Quarantine sample: one quarantine parquet from MinIO -> expect FAILURE
-  (negative control proving quarantine holds exactly the invalid rows).
-Outputs: experiments/phase6_quality.json + GX result JSONs (versioned).
+Two validations are run against the *same* suite of expectations:
+
+* Trusted sample: one Iceberg data file from MinIO (valid rows only) ->
+  expect SUCCESS. This proves the append path only stores conforming rows.
+* Quarantine sample: one quarantine Parquet file from MinIO -> expect FAILURE.
+  This is a *negative control*: if quarantined rows also passed, the quarantine
+  would not be doing its job.
+
+Outputs: ``experiments/phase6_quality.json`` + versioned GX result JSONs.
 Data Docs HTML is built for local viewing only (git-ignored).
 """
 
@@ -26,7 +31,7 @@ SAMPLE_ROWS_QUARANTINE = 20000
 
 
 def minio() -> boto3.client:
-    """Return a boto3 client for local MinIO."""
+    """Return a boto3 client for local MinIO (demo credentials)."""
     return boto3.client(
         "s3",
         endpoint_url="http://localhost:9000",
@@ -37,7 +42,11 @@ def minio() -> boto3.client:
 
 
 def first_parquet_key(s3: boto3.client, bucket: str, prefix: str) -> str:
-    """Return the first .parquet key under a prefix."""
+    """Return the first ``.parquet`` key under a prefix (pagination-aware).
+
+    We only need *one* physical file as a representative sample; listing pages
+    until one Parquet object is found keeps this O(1) for our buckets.
+    """
     token = None
     while True:
         kwargs: dict = {"Bucket": bucket, "Prefix": prefix}
@@ -53,7 +62,11 @@ def first_parquet_key(s3: boto3.client, bucket: str, prefix: str) -> str:
 
 
 def sample_frame(s3: boto3.client, bucket: str, key: str, n: int, local: Path) -> pd.DataFrame:
-    """Download a parquet key and return the first n rows as pandas."""
+    """Download a parquet key and return the first ``n`` rows as pandas.
+
+    Only the first ``n`` rows are materialized: reading the footer + a small
+    slice avoids pulling a full ~50 MB month into memory.
+    """
     local.parent.mkdir(parents=True, exist_ok=True)
     s3.download_file(bucket, key, str(local))
     table = pq.read_table(str(local)).slice(0, n)
@@ -61,7 +74,13 @@ def sample_frame(s3: boto3.client, bucket: str, key: str, n: int, local: Path) -
 
 
 def build_suite(context: gx.DataContext) -> gx.ExpectationSuite:
-    """Create the yellow-trips suite mirroring contracts/yellow_trips.v1.yaml."""
+    """Create the yellow-trips suite mirroring ``contracts/yellow_trips.v1.yaml``.
+
+    Seven expectations: two non-null timestamps, three non-negative money/
+    distance columns (GX uses ``min_value`` inclusive) and two positive
+    location ids. This is the independent, second implementation of the
+    contract rules (Spark enforces them at write time, GX verifies them after).
+    """
     exps = gx.expectations
     suite = context.suites.add(gx.ExpectationSuite(name="yellow_trips"))
     suite.add_expectation(exps.ExpectColumnValuesToNotBeNull(column="tpep_pickup_datetime"))
@@ -77,7 +96,12 @@ def build_suite(context: gx.DataContext) -> gx.ExpectationSuite:
 def validate(
     context: gx.DataContext, suite: gx.ExpectationSuite, name: str, df: pd.DataFrame
 ) -> dict:
-    """Validate a dataframe; return a JSON-serializable result dict."""
+    """Validate a dataframe; return a JSON-serializable result dict.
+
+    Uses the modern GX 1.x fluent API: datasource -> asset -> batch definition
+    -> batch -> validate. Each sample gets its own datasource name so the two
+    runs do not overwrite each other in the context.
+    """
     ds = context.data_sources.add_pandas(f"pandas_{name}")
     asset = ds.add_dataframe_asset(name=f"asset_{name}")
     bdef = asset.add_batch_definition_whole_dataframe(f"batch_{name}")
@@ -88,12 +112,15 @@ def validate(
 
 def main() -> None:
     """Run trusted + quarantine validations and write versioned reports."""
+    # Rebuild the GX project from scratch so results are always reproducible.
     if GX_DIR.exists():
         shutil.rmtree(GX_DIR)
     context = gx.get_context(mode="file", project_root_dir=str(GX_DIR))
     suite = build_suite(context)
     s3 = minio()
 
+    # One trusted file and one quarantine file are enough for a representative
+    # sample; the samples are downloaded to git-ignored temp files under data/.
     trusted_key = first_parquet_key(s3, "lakehouse", "iceberg/")
     trusted = sample_frame(
         s3,
@@ -114,6 +141,8 @@ def main() -> None:
     trusted_res = validate(context, suite, "trusted", trusted)
     quar_res = validate(context, suite, "quarantine", quar)
 
+    # Truncate the raw GX output: the full JSON is huge and the summary below
+    # carries the information the README needs.
     (EXP / "phase6_gx_trusted.json").write_text(
         json.dumps(trusted_res, indent=2)[:200000], encoding="utf-8"
     )
@@ -127,6 +156,7 @@ def main() -> None:
         datadocs = f"skipped: {type(exc).__name__}: {exc}"
 
     def failed_names(res: dict) -> list[str]:
+        """Return the columns of the expectations that failed."""
         return [
             r["expectation_config"]["kwargs"].get("column", "?")
             for r in res.get("results", [])
@@ -154,6 +184,8 @@ def main() -> None:
     }
     (EXP / "phase6_quality.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
     print(json.dumps(summary, indent=2))
+    # Hard gates: the script fails loudly if quality regresses, which makes it
+    # usable as a CI/acceptance step rather than an informational report.
     assert trusted_res["success"] is True, "trusted sample must pass all expectations"
     assert quar_res["success"] is False, "quarantine sample must fail (negative control)"
 

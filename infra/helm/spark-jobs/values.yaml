@@ -1,20 +1,28 @@
+# Values for the spark-jobs chart (ingestion + zones Jobs).
+# Everything the Job needs is parameterized here so the template stays generic.
+
 image:
   repository: lakehouse/spark-runner
   tag: "3.5.9-0.1.0"
+# Resources for the *submitter pod* (the client-mode driver runs here).
 runnerResources:
   requests: {cpu: 500m, memory: 1Gi}
   limits: {cpu: "2", memory: 3Gi}
+# Driver runs in the submitter pod; executors are separate pods.
 driverMemory: 1g
 executorInstances: 2
 executorMemory: 3g
 executorCores: 1
+# In-cluster endpoints (cluster DNS names, not localhost).
 catalogUri: http://lakekeeper.lakehouse.svc.cluster.local:8181/catalog
 warehouse: warehouse
 table: lakekeeper.nyc.yellow_trips
 s3Endpoint: http://minio.lakehouse.svc.cluster.local:9000
 s3AccessKey: minioadmin
 s3SecretKey: minioadmin-local-demo-only
+# Paths inside the spark-runner image (src/ and contracts/ are COPYed there).
 contractPath: /opt/spark/jobs/contracts/yellow_trips.v1.yaml
 quarantinePath: s3a://quarantine/yellow_trips
+# Zone reference table inputs (loaded by scripts/load-zones.ps1).
 zonesTable: lakekeeper.nyc.taxi_zones
 zonesInput: s3a://lakehouse/raw/taxi_zone_lookup.csv

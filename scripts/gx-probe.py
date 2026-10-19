@@ -1,10 +1,16 @@
-"""GX probe: minimal pandas validation to pin down the 1.x API."""
+"""GX probe: minimal pandas validation to pin down the Great Expectations 1.x API.
+
+Development scratchpad, not part of the pipeline. It documents the exact fluent
+calls (datasource -> asset -> batch definition -> batch -> validate) that
+``scripts/run-quality.py`` relies on, so the API shape is reproducible.
+"""
 
 import shutil
 
 import great_expectations as gx
 import pandas as pd
 
+# Always start from a clean file-based context.
 shutil.rmtree("gx_probe", ignore_errors=True)
 
 print("gx", gx.__version__)
@@ -20,5 +26,6 @@ suite = context.suites.add(gx.ExpectationSuite(name="probe_suite"))
 suite.add_expectation(gx.expectations.ExpectColumnValuesToNotBeNull(column="a"))
 suite.add_expectation(gx.expectations.ExpectColumnValuesToBeBetween(column="b", min_value=0))
 result = batch.validate(suite)
+# b contains -0.5 -> the suite must report failure, proving validation works.
 print("success:", result.success)
 print("stats:", result.statistics)

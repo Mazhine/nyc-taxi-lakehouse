@@ -1,3 +1,7 @@
+# Project metadata, dependencies (pinned) and tool configuration.
+# Installing this file (`pip install -e .[dev]`) gives the exact environment
+# used to produce the measured results in the README.
+
 [build-system]
 requires = ["setuptools>=69"]
 build-backend = "setuptools.build_meta"
@@ -6,6 +10,7 @@ build-backend = "setuptools.build_meta"
 name = "lakehouse-platform"
 version = "0.1.0"
 requires-python = ">=3.12"
+# Runtime dependencies, pinned to the versions actually verified.
 dependencies = [
   "boto3==1.43.113",
   "great-expectations==1.24.0",
@@ -18,8 +23,10 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+# Development tools only (lint + tests).
 dev = ["pytest==9.1.1", "ruff==0.17.0"]
 
+# Packages shipped by the project (src is the import root).
 [tool.setuptools]
 packages = ["src", "src.benchmarks", "src.ingestion", "src.maintenance", "src.quality", "src.quarantine"]
 
@@ -28,6 +35,7 @@ target-version = "py312"
 line-length = 100
 
 [tool.ruff.lint]
+# pycodestyle (E), pyflakes (F), isort (I), pyupgrade (UP), bugbear (B).
 select = ["E", "F", "I", "UP", "B"]
 
 [tool.pytest.ini_options]

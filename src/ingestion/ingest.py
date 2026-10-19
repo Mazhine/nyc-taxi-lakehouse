@@ -1,15 +1,35 @@
 """Spark ingestion job: incremental + idempotent parquet -> Iceberg.
 
-Contract-driven: schema drift (renames/case/type changes) is normalized and
-logged; missing required columns quarantine the whole file; rows violating
-rules go to quarantine with a reason. Idempotency is file-level: a ledger
-(DISTINCT source_file) skips replays, otherwise valid rows append (D13).
+This is the heart of the platform. It reads one raw Parquet file (a single
+month of NYC TLC trips), validates every row against a YAML data contract,
+writes the bad rows to a quarantine zone, and appends the good rows to an
+Apache Iceberg table registered in a REST catalog (Lakekeeper).
 
-Local example:
+Why it is designed this way
+---------------------------
+* Contract-driven: the contract file declares the required columns, their
+  types and the business rules. Schema drift (renamed / case-changed columns,
+  changed types) is normalized and reported, so a slightly different monthly
+  file does not break the pipeline. Missing *required* columns quarantine the
+  whole file instead of silently loading garbage.
+* Row rules: rows that violate a rule (pickup after dropoff, negative amount,
+  invalid location id, null critical field) are routed to quarantine with a
+  human-readable ``_quarantine_reason`` column instead of failing the job.
+* Idempotency is *file-level*: a ledger column (``source_file``) is queried at
+  the start. If the file was already loaded, the job is a no-op
+  (``skipped_already_loaded``). Otherwise valid rows are appended. This avoids
+  the 20M-row ``MERGE INTO`` that out-of-memory'd the demo machine (decision
+  D13). ``build_merge_sql``/``row_hash`` are kept as a tested alternative.
+
+Local example::
+
   python src/ingestion/ingest.py --input data/yellow_tripdata_2024-01.parquet \\
     --table lakekeeper.nyc.yellow_trips --contract contracts/yellow_trips.v1.yaml \\
     --source-file yellow_tripdata_2024-01 --s3-endpoint http://localhost:9000 \\
     --catalog-uri http://localhost:8181/catalog --limit 10000
+
+The same file runs unchanged inside Kubernetes (see
+``infra/helm/spark-jobs/templates/job-ingest.yaml``).
 """
 
 from __future__ import annotations
@@ -20,6 +40,8 @@ import json
 import os
 import sys
 
+# Canonical column order used to build the row hash. Keeping a fixed order
+# makes the hash stable across runs (and therefore usable as an idempotency key).
 CANONICAL_ORDER = [
     "VendorID",
     "tpep_pickup_datetime",
@@ -35,6 +57,8 @@ CANONICAL_ORDER = [
 ]
 HASH_COLUMNS = CANONICAL_ORDER
 
+# Iceberg + S3A + AWS SDK jars needed for a local Spark session (the cluster
+# image bakes these into /opt/spark/jars, so this list is only used locally).
 PACKAGES = ",".join(
     [
         "org.apache.iceberg:iceberg-spark-runtime-3.5_2.12:1.6.1",
@@ -46,12 +70,17 @@ PACKAGES = ",".join(
 
 
 def row_hash(values: list[str]) -> str:
-    """Stable hash for idempotency keys."""
+    """Stable hash for idempotency keys (sha256 of the values joined by ``|``)."""
     return hashlib.sha256("|".join(values).encode("utf-8")).hexdigest()[:32]
 
 
 def build_merge_sql(table: str, staging_view: str) -> str:
-    """Return MERGE SQL making the load idempotent on (source_file, row_hash)."""
+    """Return MERGE SQL making the load idempotent on (source_file, row_hash).
+
+    Kept as a tested utility for the "day 2" design: an Iceberg MERGE would
+    deduplicate at *row* level, but it is too heavy for the demo machine, so the
+    production path uses the file ledger instead (see module docstring).
+    """
     return (
         f"MERGE INTO {table} t USING {staging_view} s "
         "ON t.source_file = s.source_file AND t.row_hash = s.row_hash "
@@ -60,7 +89,7 @@ def build_merge_sql(table: str, staging_view: str) -> str:
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
-    """Parse CLI args."""
+    """Parse CLI args (defaults target the local Docker/kind setup)."""
     p = argparse.ArgumentParser(description="Incremental parquet to Iceberg load")
     p.add_argument("--input", required=True, help="Parquet path (file://, s3a://)")
     p.add_argument("--table", required=True, help="Target table (catalog.ns.table)")
@@ -80,7 +109,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 
 def build_spark(args: argparse.Namespace):
-    """Build a Spark session wired to Lakekeeper REST + S3A/MinIO."""
+    """Build a Spark session wired to Lakekeeper REST + S3A/MinIO.
+
+    Two families of settings are needed and both matter:
+    * ``spark.sql.catalog.lakekeeper.*`` configures the Iceberg REST catalog and
+      the S3 FileIO used for *metadata/table* operations.
+    * ``spark.hadoop.fs.s3a.*`` configures plain Hadoop S3A, used whenever Spark
+      reads a raw ``s3a://`` path. (An executor started by Spark's
+      ``sc.textFiles`` etc. inherits the former but not the Hadoop wire-up.)
+    """
     from pyspark.sql import SparkSession
 
     return (
@@ -91,6 +128,7 @@ def build_spark(args: argparse.Namespace):
             "spark.sql.extensions",
             "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions",
         )
+        # Iceberg vectorized reads SIGSEGV on this JVM/JDK combination (D14).
         .config("spark.sql.iceberg.vectorization.enabled", "false")
         .config("spark.sql.catalog.lakekeeper", "org.apache.iceberg.spark.SparkCatalog")
         .config("spark.sql.catalog.lakekeeper.type", "rest")
@@ -113,7 +151,18 @@ def build_spark(args: argparse.Namespace):
 
 
 def normalize_columns(df, contract):
-    """Rename case-insensitively + cast to contract types; return (df, drift)."""
+    """Rename case-insensitively + cast to contract types; return (df, drift, missing).
+
+    Steps:
+    1. Build a lower-case index of the actual columns so ``Airport_fee`` and
+       ``airport_fee`` are treated as the same name.
+    2. Record *drift*: extra source columns and columns whose case/name differs
+       from the contract (logged in the run summary, never silently dropped).
+    3. Project only the required columns, renaming/casting each one to its
+       contract type (timestamp / int64 / double).
+    4. Return the list of required columns that are entirely absent so the
+       caller can quarantine the whole file.
+    """
     from pyspark.sql import functions as F
 
     required = [c["name"] for c in contract["required_columns"]]
@@ -142,13 +191,22 @@ def normalize_columns(df, contract):
             df = df.withColumn(req, F.col(f"`{src_col}`").cast("double"))
         elif src_col != req:
             df = df.withColumnRenamed(src_col, req)
+        # Drop the original name when it differed, otherwise it would survive
+        # the projection as a duplicate column.
         if src_col != req and src_col in df.columns:
             df = df.drop(src_col)
     return df.select(*[r for r in required if r.lower() in by_lower]), drift, missing
 
 
 def split_valid_quarantine_df(df):
-    """Split a normalized DataFrame; quarantine rows get _quarantine_reason."""
+    """Split a normalized DataFrame; quarantine rows get ``_quarantine_reason``.
+
+    ``bad`` is a single boolean expression combining every contract rule.
+    ``reasons`` is built with the same conditions so each rejected row explains
+    exactly which rule(s) it broke (semicolon-separated when several apply).
+    This mirrors the pure-Python logic in :mod:`src.quarantine` used by unit
+    tests, so both implementations must stay in sync.
+    """
     from pyspark.sql import functions as F
 
     bad = (
@@ -192,7 +250,12 @@ def should_skip(loaded_files: set[str], source_file: str) -> bool:
 
 
 def loaded_source_files(spark, table: str) -> set[str]:
-    """Return DISTINCT source_file values already in the table (narrow scan)."""
+    """Return DISTINCT source_file values already in the table (narrow scan).
+
+    Any error (table missing on a first load, transient catalog issue) is
+    treated as "nothing loaded yet", which is the safe default: the worst case
+    is a redundant append that later runs will still detect via the ledger.
+    """
     try:
         rows = spark.sql(f"SELECT DISTINCT source_file FROM {table}").collect()
         return {r["source_file"] for r in rows if r["source_file"]}
@@ -201,9 +264,11 @@ def loaded_source_files(spark, table: str) -> set[str]:
 
 
 def run(args: argparse.Namespace) -> dict:
-    """Run the load; return a JSON-serializable summary."""
+    """Run the load; return a JSON-serializable summary (also printed by main)."""
     import sys
 
+    # Make ``import src.ingestion`` work when the file is executed by path
+    # (both locally and via spark-submit's local://).
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
     from pyspark.sql import functions as F
 
@@ -213,6 +278,7 @@ def run(args: argparse.Namespace) -> dict:
 
     spark = build_spark(args)
     try:
+        # --- Idempotency gate: stop early if this file is already in the table.
         if should_skip(loaded_source_files(spark, args.table), args.source_file):
             return {
                 "source_file": args.source_file,
@@ -227,8 +293,11 @@ def run(args: argparse.Namespace) -> dict:
             df = df.limit(args.limit)
         input_rows = df.count()
 
+        # --- Schema normalization + drift detection.
         df, drift, missing = normalize_columns(df, contract)
         if missing:
+            # A required column is absent: quarantine the entire file, tagged
+            # with the reason, and stop (do not append a partial file).
             summary = {
                 "source_file": args.source_file,
                 "input_rows": input_rows,
@@ -248,11 +317,13 @@ def run(args: argparse.Namespace) -> dict:
                 summary["quarantine_path"] = args.quarantine_path
             return summary
 
-        # Normalize: case-insensitive rename + safe casts to contract types.
+        # --- Idempotency key material: the source label + a deterministic hash
+        # of the canonical columns (used by the optional MERGE path).
         df = df.withColumn("source_file", F.lit(args.source_file))
         concat_cols = [F.coalesce(F.col(c).cast("string"), F.lit("")) for c in HASH_COLUMNS]
         df = df.withColumn("row_hash", F.sha2(F.concat_ws("|", *concat_cols), 256).substr(1, 32))
 
+        # --- Split valid vs quarantined, then write both.
         valid, quarantined = split_valid_quarantine_df(df)
         n_valid = valid.count()
         n_quar = quarantined.count()
@@ -264,6 +335,8 @@ def run(args: argparse.Namespace) -> dict:
                 )
             )
 
+        # Project onto the live table schema (extra source columns are ignored,
+        # keeping the load resilient to forward evolution).
         table_cols = [f.name for f in spark.table(args.table).schema.fields]
         valid.select(*table_cols).writeTo(args.table).append()
         return {
@@ -275,11 +348,12 @@ def run(args: argparse.Namespace) -> dict:
             "drift": drift,
         }
     finally:
+        # Always release the Spark session, even on error.
         spark.stop()
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Entry point."""
+    """Entry point: parse args, run the load, print the JSON summary."""
     args = parse_args(argv)
     summary = run(args)
     print(json.dumps(summary, indent=2), flush=True)

@@ -1,7 +1,9 @@
 """Phase 3 smoke test: create namespace + table via Lakekeeper REST (PyIceberg).
 
-Proves catalog + MinIO wiring end-to-end. Table is created empty here;
-Phase 4 fills it with Spark. Outputs -> experiments/phase3_catalog.json
+Proves the catalog + MinIO wiring end-to-end *without* Spark: if PyIceberg can
+create a table through the REST catalog and get back an ``s3://`` location, the
+catalog and object store are correctly connected. The table is created empty
+here; Phase 4 fills it with Spark. Output -> ``experiments/phase3_catalog.json``.
 """
 
 from __future__ import annotations
@@ -29,9 +31,12 @@ def main() -> None:
         warehouse=WAREHOUSE,
         token="dummy",  # unsecured local deployment only
     )
+    # Idempotent: create the namespace only if it is not already there.
     existing = [ns for ns in catalog.list_namespaces()]
     if (NAMESPACE,) not in existing:
         catalog.create_namespace(NAMESPACE)
+    # The canonical schema: 11 trip columns + 2 pipeline columns (source_file,
+    # row_hash). Field ids are explicit because Iceberg tracks columns by id.
     schema = Schema(
         NestedField(1, "VendorID", LongType(), required=False),
         NestedField(2, "tpep_pickup_datetime", TimestampType(), required=True),

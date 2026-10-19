@@ -1,4 +1,10 @@
-"""Run sql/*.sql against Trino (host -> localhost:8080) and save JSON results."""
+"""Run every ``sql/*.sql`` against Trino and save JSON results.
+
+The host talks to Trino through the NodePort published on ``localhost:8080``.
+Each result is written as ``<out-dir>/phase5_<stem>.json`` with the SQL text,
+the columns and the rows, so ``scripts/verify-results.py`` can compare a fresh
+run with the committed reference.
+"""
 
 from __future__ import annotations
 
@@ -14,7 +20,11 @@ PORT = 8080
 
 
 def run_query(sql: str) -> tuple[list[str], list[list]]:
-    """Execute one statement; return (columns, rows as plain lists)."""
+    """Execute one statement; return ``(columns, rows as plain lists)``.
+
+    Values are cast to ``str`` so the JSON is stable regardless of the Python
+    type Trino's driver returns (Decimal, datetime, ...).
+    """
     conn = trino.dbapi.connect(
         host=HOST, port=PORT, user="lakehouse", catalog="lakehouse", schema="nyc"
     )
@@ -26,8 +36,10 @@ def run_query(sql: str) -> tuple[list[str], list[list]]:
 
 
 def main() -> None:
-    """Run every sql/*.sql file; write <out-dir>/phase5_<name>.json."""
+    """Run every ``sql/*.sql`` file; write ``<out-dir>/phase5_<name>.json``."""
     parser = argparse.ArgumentParser()
+    # --out-dir lets verify.ps1 write to a temp folder without touching the
+    # committed reference files.
     parser.add_argument("--out-dir", default=str(ROOT / "experiments"))
     args = parser.parse_args()
     exp = Path(args.out_dir)
@@ -43,6 +55,7 @@ def main() -> None:
             encoding="utf-8",
         )
         print(f"{path.name} -> {out.name}: {len(rows)} rows")
+        # Echo the first rows so the operator sees the result immediately.
         for row in rows[:12]:
             print("  ", row)
 

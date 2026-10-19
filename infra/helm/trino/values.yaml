@@ -21,6 +21,9 @@ trino:
       requests: {cpu: "1", memory: 3Gi}
       limits: {cpu: "2", memory: 4Gi}
   catalogs:
+    # Trino catalog "lakehouse": an Iceberg REST catalog served by Lakekeeper.
+    # expire/orphan min-retention=1h is a demo setting so maintenance tests are
+    # observable quickly (production would use days).
     lakehouse: |-
       connector.name=iceberg
       iceberg.catalog.type=rest

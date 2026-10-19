@@ -1,4 +1,10 @@
-"""Probe: read one Iceberg data file via plain S3A (bypass Iceberg reader)."""
+"""Probe: read one Iceberg data file via plain S3A (bypass the Iceberg reader).
+
+Debug-only script run inside the cluster. It uses ``spark.hadoop.fs.s3a.*`` only
+(no Iceberg catalog) to read a Parquet object straight from MinIO. If this works
+but Iceberg reads crash, the problem is the Iceberg reader (which is exactly the
+vectorization issue fixed by disabling it, decision D14).
+"""
 
 from pyspark.sql import SparkSession
 
@@ -17,6 +23,7 @@ spark = (
     .config("spark.hadoop.fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem")
     .getOrCreate()
 )
+# One concrete data file written by an earlier ingestion run.
 path = (
     "s3a://lakehouse/iceberg/01a13a70-13b8-7c51-bb10-2fe69a49779e/data/"
     "00000-13-57ae5071-fd7e-40bf-8b3e-0bf0ac0742de-0-00001.parquet"

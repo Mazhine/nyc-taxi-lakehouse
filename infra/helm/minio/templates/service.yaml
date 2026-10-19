@@ -1,3 +1,5 @@
+# NodePort Service exposing the S3 API and the console. The NodePort numbers
+# match the host ports published by Terraform (kind port mappings).
 apiVersion: v1
 kind: Service
 metadata:

@@ -8,7 +8,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/lakehouse-platform/lakehouse-platform.git
+    repoURL: https://github.com/Mazhine/NYC-Taxi-Lakehouse-A-Reproducible-Measured-Data-Platform-in-a-Box.git
     targetRevision: HEAD
     path: infra/argocd/apps
   destination:

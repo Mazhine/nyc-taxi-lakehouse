@@ -1,3 +1,5 @@
+# PostgreSQL for the Lakekeeper catalog metadata: PVC + Deployment + Service.
+# Only metadata (not trip data) is stored here; the Service is cluster-internal.
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:

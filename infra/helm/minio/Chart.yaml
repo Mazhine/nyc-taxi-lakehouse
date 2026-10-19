@@ -1,3 +1,5 @@
+# Helm metadata for the MinIO chart (templates/ defines Deployment, Service,
+# PVC, Secret and the bucket-creating Job).
 apiVersion: v2
 name: minio
 description: MinIO-compatible object storage (community fork pgsty/minio) for the lakehouse

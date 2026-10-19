@@ -1,10 +1,13 @@
 #!/bin/bash
 # Debug helper mirroring infra/helm/spark-jobs/templates/job-ingest.yaml.
 # Runs inside a spark-runner pod (kubectl exec). Args: MONTH [LIMIT].
+# The Helm Job is the source of truth; this script exists for quick iteration.
 set -eux
 MONTH="${1:-2024-01}"
 LIMIT_ARGS=""
+# Optional second argument caps the input rows (fast smoke runs).
 if [ -n "${2:-}" ]; then LIMIT_ARGS="--limit $2"; fi
+# Client-mode drivers are not reachable by DNS, so advertise the pod IP.
 DRIVER_IP="$(hostname -i | awk '{print $1}')"
 /opt/spark/bin/spark-submit \
   --master k8s://https://kubernetes.default.svc \

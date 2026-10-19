@@ -1,5 +1,7 @@
-# Bootstrap (once) + warehouse creation (idempotent-ish: fails if warehouse exists,
-# job restartPolicy handles ordering; re-apply keeps the existing warehouse).
+# Catalog bootstrap, run once after the server is up. Two steps:
+#   1) POST /bootstrap — accept terms and create the default project.
+#   2) POST /warehouse — register the "warehouse" backed by the S3 bucket.
+# Both calls tolerate "already done" so re-applying the chart is safe.
 apiVersion: v1
 kind: ConfigMap
 metadata:

@@ -1,3 +1,4 @@
+# Helm metadata for the Postgres chart (catalog metadata store only).
 apiVersion: v2
 name: postgres
 description: Postgres 16 backend for the Lakekeeper Iceberg REST catalog

@@ -1,6 +1,6 @@
 """Spark-local transform tests (no cluster, no catalog).
 
-Covers contract normalization (case/type drift) and quarantine split on a
+Covers contract normalization (case/type drift) and the quarantine split on a
 tiny in-memory DataFrame. Skipped if pyspark/Java is unavailable, and skipped
 on Windows hosts (local Spark hangs there; run in the Linux spark-runner
 container instead — see docs/DECISIONS.md D12).
@@ -11,6 +11,8 @@ import sys
 
 import pytest
 
+# Spark's local JVM hangs on this Windows host, so the whole module is skipped
+# there. CI runs it inside apache/spark:3.5.9 (see .github/workflows/ci.yml).
 pytestmark = pytest.mark.skipif(
     sys.platform == "win32",
     reason="Spark local hangs on Windows host; runs in Linux container",
@@ -29,7 +31,7 @@ CONTRACT = Path(__file__).resolve().parents[1] / "contracts" / "yellow_trips.v1.
 
 @pytest.fixture(scope="module")
 def spark():
-    """Local Spark session for tests."""
+    """One local Spark session shared by all tests in this module."""
     session = (
         SparkSession.builder.master("local[1]")
         .appName("test-ingest")
@@ -41,6 +43,7 @@ def spark():
 
 
 def _rows():
+    """Two rows: one valid, one with a negative fare (plus realistic 2024 drift)."""
     good = {
         "VendorID": 1,
         "tpep_pickup_datetime": datetime.datetime(2024, 1, 1, 10, 0, 0),
@@ -61,18 +64,20 @@ def _rows():
 
 
 def test_normalize_casts_and_reports_drift(spark):
+    """normalize_columns renames/casts to contract types and reports drift."""
     df = spark.createDataFrame(_rows())
     contract = load_contract(CONTRACT)
     normed, drift, missing = normalize_columns(df, contract)
     assert missing == []
     assert set(["VendorID", "fare_amount"]).issubset(set(normed.columns))
     dtypes = dict(normed.dtypes)
-    assert dtypes["VendorID"] == "bigint"
+    assert dtypes["VendorID"] == "bigint"  # int32 -> int64 cast applied
     assert dtypes["fare_amount"] == "double"
     assert isinstance(drift["extra_columns"], list)
 
 
 def test_split_quarantines_bad_row_with_reason(spark):
+    """A single invalid row is quarantined with a machine-readable reason."""
     df = spark.createDataFrame(_rows())
     contract = load_contract(CONTRACT)
     normed, _, _ = normalize_columns(df, contract)
@@ -84,6 +89,7 @@ def test_split_quarantines_bad_row_with_reason(spark):
 
 
 def test_missing_column_reports_file_level(spark):
+    """Missing required columns are reported so the file can be quarantined as a whole."""
     df = spark.createDataFrame(
         [{"VendorID": 1, "trip_distance": 1.0}],
     )

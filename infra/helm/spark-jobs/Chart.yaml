@@ -1,3 +1,4 @@
+# Helm metadata for the spark-jobs chart (ingestion + zones batch Jobs and RBAC).
 apiVersion: v2
 name: spark-jobs
 description: Spark-on-K8s ingestion jobs (client mode, small executors)

@@ -1,5 +1,6 @@
 #!/bin/bash
 # Count helper mirroring submit-ingest.sh conf (k8s client mode, 1 small executor).
+# Kept as a debugging aid; prefer the maintenance job for scheduled runs.
 set -eu
 DRIVER_IP="$(hostname -i | awk '{print $1}')"
 /opt/spark/bin/spark-submit \

@@ -5,6 +5,7 @@ $ErrorActionPreference = "Stop"
 $Root = Split-Path $PSScriptRoot -Parent
 # Pick up winget-installed tools (helm/terraform/kind) without shell restart.
 $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "User")
+# Prefer the project venv (pinned tools); fall back to whatever is on PATH.
 $VenvBin = Join-Path (Join-Path $Root ".venv") "Scripts"
 $VenvPython = Join-Path $VenvBin "python.exe"
 if (Test-Path $VenvPython) {
@@ -16,12 +17,16 @@ if (Test-Path $VenvPython) {
 }
 Push-Location $Root
 try {
+  # --- Python: lint, formatting and unit tests.
   & $Ruff check src tests scripts
   & $Ruff format --check src tests scripts
   & $Python -m pytest -q
+  # --- Terraform: provider init without backend, validate and format check.
   terraform -chdir=infra/terraform init -backend=false
   terraform -chdir=infra/terraform validate
   terraform -chdir=infra/terraform fmt -check
+  # --- Helm: vendor the Trino dependency, lint and render every chart. An
+  # empty render still catches template errors, which is what CI cares about.
   helm dependency update infra/helm/trino
   foreach ($chart in @("minio", "postgres", "lakekeeper", "spark-jobs", "trino")) {
     helm lint "infra/helm/$chart"

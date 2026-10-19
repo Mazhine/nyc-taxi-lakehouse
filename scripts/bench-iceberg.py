@@ -1,5 +1,10 @@
 """Phase 7: Iceberg features + measured before/after benchmarks (Trino only).
 
+All queries go through Trino (the same engine a BI tool would use). Every
+measurement is repeated (median + stdev) on the same machine, and the raw
+samples are written to ``experiments/phase7_*.json`` so the README numbers are
+auditable.
+
 Steps (all timed, repeated, same machine):
   1. schema evolution (ADD + RENAME COLUMN): files count unchanged (no rewrite)
   2. time travel (FOR VERSION AS OF oldest snapshot) + rollback + restore
@@ -24,6 +29,9 @@ EXP = ROOT / "experiments"
 HOST, PORT = "localhost", 8080
 REPEATS = 5
 
+# Reference query: aggregate one month (March 2024). It is used both before and
+# after compaction/partitioning, so any speed difference is attributable to the
+# table layout, not to a different query.
 Q_MONTH = """
 SELECT source_file, COUNT(*), AVG(total_amount)
 FROM lakehouse.nyc.yellow_trips
@@ -41,7 +49,11 @@ def conn():
 
 
 def run(sql: str) -> tuple[list[str], list[list]]:
-    """Execute SQL; return (columns, rows)."""
+    """Execute SQL; return ``(columns, rows)`` with every value stringified.
+
+    Stringifying keeps the JSON output comparable across engines and avoids
+    Decimal/date serialization surprises.
+    """
     cur = conn().cursor()
     cur.execute(sql)
     cols = [d[0] for d in cur.description] if cur.description else []
@@ -49,7 +61,11 @@ def run(sql: str) -> tuple[list[str], list[list]]:
 
 
 def timed(sql: str, repeats: int = REPEATS) -> dict:
-    """Run a query N times; return samples + median + stdev + last rows."""
+    """Run a query N times; return samples + median + stdev + last rows.
+
+    Only the *last* result rows are kept (they are identical across repeats) to
+    avoid storing N copies of the same payload.
+    """
     samples, rows = [], None
     for _ in range(repeats):
         start = time.perf_counter()
@@ -67,7 +83,11 @@ def timed(sql: str, repeats: int = REPEATS) -> dict:
 
 
 def files_count(table: str) -> dict:
-    """Return file count + bytes from the $files metadata table."""
+    """Return file count + bytes from the Iceberg ``$files`` metadata table.
+
+    ``$files`` is a system table Iceberg maintains itself, so this is ground
+    truth for "did compaction actually reduce the number of files?".
+    """
     cat, schema, tbl = table.split(".")
     _, rows = run(f'SELECT COUNT(*), SUM(file_size_in_bytes) FROM {cat}.{schema}."{tbl}$files"')
     return {"data_files": int(rows[0][0]), "bytes": int(rows[0][1])}
@@ -85,7 +105,8 @@ def main() -> None:
         "config": {"repeats": REPEATS, "engine": "trino-483-1-worker", "table_rows": 20015099}
     }
 
-    # 1. schema evolution without rewrite
+    # 1. Schema evolution is metadata-only: adding/renaming a column must NOT
+    #    rewrite the existing Parquet files, so the file count stays identical.
     before = files_count("lakehouse.nyc.yellow_trips")
     run("ALTER TABLE lakehouse.nyc.yellow_trips ADD COLUMN fare_per_mile DOUBLE")
     run("ALTER TABLE lakehouse.nyc.yellow_trips RENAME COLUMN tip_amount TO tip_amt")
@@ -101,7 +122,10 @@ def main() -> None:
     }
     print("evolution: files unchanged =", before == after)
 
-    # 2. time travel + rollback + restore
+    # 2. Time travel: read the table as it was at the oldest snapshot, roll the
+    #    table back to it, then restore the latest snapshot. Iceberg keeps all
+    #    historical metadata (until it is expired), which is what makes this
+    #    possible without a backup.
     _, snaps = run(
         'SELECT snapshot_id FROM lakehouse.nyc."yellow_trips$snapshots" ORDER BY committed_at'
     )
@@ -122,7 +146,9 @@ def main() -> None:
     }
     print("time travel:", report["time_travel"])
 
-    # 3. compaction benchmark
+    # 3. Compaction: measure the query before, rewrite small files into fewer
+    #    large ones, then measure again. Fewer, larger files = less planning and
+    #    fewer S3/MinIO round-trips.
     bench_before = timed(Q_MONTH)
     files_before = files_count("lakehouse.nyc.yellow_trips")
     t0 = time.perf_counter()
@@ -143,7 +169,9 @@ def main() -> None:
     }
     save("phase7_compaction.json", report["compaction"])
 
-    # 4. partitioning benchmark (CTAS clone, then same query both sides)
+    # 4. Partitioning: clone the table with month(pickup) partitioning and run
+    #    the same monthly query on both versions. The clone is built with CTAS,
+    #    whose cost is reported too.
     t0 = time.perf_counter()
     run("DROP TABLE IF EXISTS lakehouse.nyc.yellow_trips_part")
     run(
@@ -161,7 +189,8 @@ def main() -> None:
     }
     save("phase7_partitioning.json", report["partitioning"])
 
-    # 5. full build vs incremental append (one-month slices)
+    # 5. Full build (CTAS) vs incremental append (INSERT) for one-month slices.
+    #    Shows why append-only ingestion is the right default.
     t0 = time.perf_counter()
     run("DROP TABLE IF EXISTS lakehouse.nyc.bench_slice")
     run(
@@ -186,7 +215,8 @@ def main() -> None:
     }
     save("phase7_full_vs_incremental.json", report["full_vs_incremental"])
 
-    # 6. expire snapshots (1h demo retention)
+    # 6. Snapshot expiration: the demo uses a 1-hour retention so old snapshots
+    #    are actually removed during the experiment (production would keep days).
     _, snaps_before = run('SELECT COUNT(*) FROM lakehouse.nyc."yellow_trips$snapshots"')
     t0 = time.perf_counter()
     _, exp_res = run(
@@ -204,6 +234,7 @@ def main() -> None:
     }
     save("phase7_expire.json", report["expire_snapshots"])
 
+    # Consolidated report used by the README table.
     report["snapshots_for_reference"] = {"note": "see phase5_04_snapshots.json"}
     save("phase7_report.json", report)
     print(json.dumps({k: "ok" for k in report}, indent=2))

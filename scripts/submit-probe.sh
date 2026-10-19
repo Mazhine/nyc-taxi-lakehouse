@@ -1,6 +1,7 @@
 #!/bin/bash
 # One-off probe submitter (debugging aid). Args: APP_PY [APP_ARGS...]
 # Not used by automation; infra/helm/spark-jobs is the source of truth.
+# TieredStopAtLevel=1 speeds up short-lived probes at the cost of peak JIT.
 set -eu
 APP_PY="${1:-/tmp/distinct.py}"
 shift || true

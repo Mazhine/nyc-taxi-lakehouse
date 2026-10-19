@@ -1,3 +1,5 @@
+# Persistent volume for MinIO data. Survives pod restarts; removed together with
+# the kind cluster (nothing here is meant to outlive the demo).
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:

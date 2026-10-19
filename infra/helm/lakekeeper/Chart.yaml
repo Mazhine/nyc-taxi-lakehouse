@@ -1,3 +1,4 @@
+# Helm metadata for the Lakekeeper chart (REST catalog server + migrate/bootstrap Jobs).
 apiVersion: v2
 name: lakekeeper
 description: Lakekeeper Iceberg REST catalog (Rust single binary) + bootstrap jobs

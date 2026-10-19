@@ -1,3 +1,5 @@
+# PostgreSQL values: stores ONLY catalog metadata (namespaces, tables,
+# snapshots pointers) used by Lakekeeper. Trip data never lands here.
 image:
   repository: postgres
   tag: 16.9-bookworm

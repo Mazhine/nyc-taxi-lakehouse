@@ -1,4 +1,8 @@
-"""Contract tests: schema presence, no silent acceptance of drift."""
+"""Contract tests: schema presence, no silent acceptance of drift.
+
+These tests guard the *contract itself* and the helper that compares it to an
+actual schema. They need no Spark and run everywhere (CI, local Windows).
+"""
 
 from pathlib import Path
 
@@ -10,6 +14,7 @@ CONTRACT = Path(__file__).resolve().parents[1] / "contracts" / "yellow_trips.v1.
 
 
 def test_contract_loads_and_has_required_columns():
+    """The shipped contract must parse and declare the expected structure."""
     contract = load_contract(CONTRACT)
     assert contract["contract"] == "yellow_trips"
     assert len(contract["required_columns"]) >= 10
@@ -17,6 +22,7 @@ def test_contract_loads_and_has_required_columns():
 
 
 def test_missing_column_detected():
+    """A source schema lacking required columns must be reported (file-level quarantine)."""
     contract = load_contract(CONTRACT)
     actual = ["VendorID", "trip_distance"]  # deliberately incomplete
     missing = missing_columns(contract, actual)
@@ -25,6 +31,7 @@ def test_missing_column_detected():
 
 
 def test_extra_columns_allowed_but_required_must_hold():
+    """Extra columns are tolerated; required ones must exist and rejections carry a reason."""
     contract = load_contract(CONTRACT)
     assert contract.get("allowed_extra_columns") is True
     assert contract.get("forbidden_missing_columns") is True

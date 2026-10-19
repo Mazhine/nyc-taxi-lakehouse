@@ -1,3 +1,5 @@
+# Input variables: defaults target the local demo, override with -var if needed.
+
 variable "cluster_name" {
   description = "kind cluster name"
   type        = string

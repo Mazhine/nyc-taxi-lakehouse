@@ -1,5 +1,8 @@
-# MinIO (pgsty/minio fork — upstream minio/minio images removed from Docker Hub
-# Sep 2026 and quay.io denies anonymous pulls; see docs/DECISIONS.md D09).
+# MinIO values: the S3-compatible object store that holds every data file.
+#   * bucket "lakehouse"  -> raw uploads + Iceberg table data/metadata
+#   * bucket "quarantine" -> rejected rows (kept, never deleted)
+# Image note: pgsty/minio fork — upstream minio/minio images removed from Docker
+# Hub Sep 2026 and quay.io denies anonymous pulls (see docs/DECISIONS.md D09).
 image:
   repository: pgsty/minio
   tag: RELEASE.2026-08-04T00-00-00Z
@@ -14,6 +17,7 @@ storageSize: 20Gi
 resources:
   requests: {cpu: 250m, memory: 512Mi}
   limits: {cpu: "1", memory: 1Gi}
+# NodePorts published on the host by Terraform (kind port mappings).
 nodePorts:
   api: 30090
   console: 30091

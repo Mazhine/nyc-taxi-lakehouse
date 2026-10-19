@@ -1,7 +1,11 @@
-"""Load taxi_zone_lookup.csv into nyc.taxi_zones (create-then-append, idempotent).
+"""Load ``taxi_zone_lookup.csv`` into ``nyc.taxi_zones`` (create-then-append, idempotent).
 
-Runs on K8s via the spark-runner image (submit-probe.sh) or any Spark with
-the Lakekeeper REST catalog.
+The zone lookup is a small *reference / dimension* table (265 rows) used by
+``sql/05_zone_names.sql`` to translate numeric ``PULocationID`` values into
+human-readable zone and borough names. It is loaded once (not per month).
+
+Runs on Kubernetes via ``scripts/load-zones.ps1`` (a Job in the spark-jobs
+chart) or locally with any Spark equipped with the Lakekeeper REST catalog.
 """
 
 from __future__ import annotations
@@ -11,7 +15,7 @@ import sys
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
-    """Parse CLI args."""
+    """Parse CLI args (defaults target the local kind/Docker setup)."""
     p = argparse.ArgumentParser(description="Load taxi zones reference table")
     p.add_argument("--input", default="s3a://lakehouse/raw/taxi_zone_lookup.csv")
     p.add_argument("--table", default="lakekeeper.nyc.taxi_zones")
@@ -28,6 +32,8 @@ def main(argv: list[str] | None = None) -> int:
     from pyspark.sql import functions as F
 
     args = parse_args(argv)
+    # Same catalog + S3 wiring as ingest.py: the Iceberg REST catalog for table
+    # operations and plain Hadoop S3A for reading the raw CSV.
     spark = (
         SparkSession.builder.master(args.master)
         .appName("load-zones")
@@ -35,6 +41,7 @@ def main(argv: list[str] | None = None) -> int:
             "spark.sql.extensions",
             "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions",
         )
+        # Iceberg vectorized reads SIGSEGV on this JVM/JDK combination (D14).
         .config("spark.sql.iceberg.vectorization.enabled", "false")
         .config("spark.sql.catalog.lakekeeper", "org.apache.iceberg.spark.SparkCatalog")
         .config("spark.sql.catalog.lakekeeper.type", "rest")
@@ -55,10 +62,13 @@ def main(argv: list[str] | None = None) -> int:
         .getOrCreate()
     )
     try:
+        # Idempotency: the reference table is immutable, so if it exists we stop.
         if spark.catalog.tableExists(args.table):
             n = spark.table(args.table).count()
             print(f"zones table exists with {n} rows: skip", flush=True)
             return 0
+        # Read the CSV with a header, rename LocationID to snake_case and cast
+        # to bigint so it joins cleanly with the trips fact table.
         df = spark.read.option("header", "true").csv(args.input)
         df = df.withColumnRenamed("LocationID", "location_id").withColumn(
             "location_id", F.col("location_id").cast("bigint")

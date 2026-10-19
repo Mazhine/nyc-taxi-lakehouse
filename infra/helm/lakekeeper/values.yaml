@@ -1,4 +1,7 @@
-# Lakekeeper v0.13.5 (tag WITH leading v — verified by pull 2026-10-14).
+# Lakekeeper values: the Iceberg REST catalog. It serves the table metadata that
+# Spark (writes) and Trino (reads) both share, and it stores that metadata in
+# Postgres while the data itself lives in MinIO under the "iceberg" key prefix.
+# Version note: v0.13.5 (tag WITH leading v — verified by pull 2026-10-14).
 image:
   repository: quay.io/lakekeeper/catalog
   tag: v0.13.5

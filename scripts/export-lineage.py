@@ -1,8 +1,9 @@
 """Static provenance export (Marquez NOT deployed — see docs/DECISIONS.md D18).
 
-Builds experiments/phase8_lineage.json from measured artifacts only:
-snapshots (phase5), ingest summaries (phase4), contracts, quarantine keys.
-Nodes = datasets/jobs; edges = observed reads/writes. No invented relations.
+Builds ``experiments/phase8_lineage.json`` from **measured artifacts only**:
+snapshots (phase5), ingest summaries (phase4), the contract and the quarantine
+keys. Nodes = datasets/jobs, edges = observed reads/writes. Nothing is invented:
+if it is not in a versioned JSON, it is not in the graph (honesty rule).
 """
 
 from __future__ import annotations
@@ -21,6 +22,7 @@ def main() -> None:
     nodes: dict[str, dict] = {}
     edges: list[dict] = []
 
+    # --- External origin and the first hop into object storage.
     nodes["tlc_cdn"] = {
         "kind": "external_source",
         "detail": "d37ci6vzurychx.cloudfront.net/trip-data",
@@ -36,6 +38,7 @@ def main() -> None:
         "detail": "s3://quarantine/yellow_trips/ (27 objects)",
     }
 
+    # --- One node per ingestion job, with edges straight from the summaries.
     for path in sorted(glob.glob(str(EXP / "phase4_ingest_*.json"))):
         summary = json.loads(Path(path).read_text(encoding="utf-8"))
         src = summary["source_file"]
@@ -46,6 +49,7 @@ def main() -> None:
         edges.append(
             {"from": job, "to": "nyc.yellow_trips", "via": f"append {summary['valid_rows']} rows"}
         )
+        # Only draw a quarantine edge when the summary actually reports rejects.
         if summary["quarantined_rows"]:
             edges.append(
                 {
@@ -55,6 +59,7 @@ def main() -> None:
                 }
             )
 
+    # --- Serving layer (Trino) and the quality gate (GX).
     nodes["nyc.yellow_trips"] = {
         "kind": "iceberg_table",
         "detail": {"rows": 20015099, "snapshots": len(snaps["rows"]), "files_after_optimize": 2},

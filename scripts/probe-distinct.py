@@ -1,4 +1,10 @@
-"""Probe: DISTINCT source_file over the table (JVM-stability check, debug only)."""
+"""Probe: ``SELECT DISTINCT source_file`` over the table (JVM-stability check).
+
+Debug-only script run **inside** the cluster (submitted by
+``scripts/submit-probe.sh``). It was used to diagnose driver/executor JVM
+crashes on the 20M-row table. It prints a single ``RESULT-DISTINCT=`` line so the
+answer is easy to grep from the pod log.
+"""
 
 from pyspark.sql import SparkSession
 
@@ -28,6 +34,7 @@ spark = (
     .config("spark.sql.catalog.lakekeeper.s3.path-style-access", "true")
     .config("spark.sql.catalog.lakekeeper.s3.access-key-id", "minioadmin")
     .config("spark.sql.catalog.lakekeeper.s3.secret-access-key", "minioadmin-local-demo-only")
+    # Iceberg vectorized reads SIGSEGV on this JVM/JDK combination (D14).
     .config("spark.sql.iceberg.vectorization.enabled", "false")
     .getOrCreate()
 )

@@ -1,3 +1,5 @@
+# The "lakehouse" namespace where the whole data plane lives. Created once by
+# this chart (the other charts target it, they do not create it).
 apiVersion: v1
 kind: Namespace
 metadata:

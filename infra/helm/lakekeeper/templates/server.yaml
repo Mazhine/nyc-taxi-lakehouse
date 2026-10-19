@@ -1,3 +1,5 @@
+# Lakekeeper server (the Iceberg REST catalog API) + its NodePort Service.
+# Reads/writes catalog metadata in Postgres; points Iceberg clients at MinIO.
 apiVersion: apps/v1
 kind: Deployment
 metadata:

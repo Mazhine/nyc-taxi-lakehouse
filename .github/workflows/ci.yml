@@ -1,8 +1,11 @@
+# Continuous integration: cluster-free checks plus containerized Spark tests.
+# Two jobs run on every push/PR (no cluster, no cloud, no secrets).
 name: ci
 on:
   push:
   pull_request:
 
+# Pinned tool versions so CI is reproducible.
 env:
   TERRAFORM_VERSION: 1.16.5
   HELM_VERSION: v4.3.0
@@ -10,6 +13,7 @@ env:
   K8S_VERSION: v1.33.1
 
 jobs:
+  # Job 1: lint, unit tests, and static validation of infrastructure code.
   lint-test:
     runs-on: ubuntu-latest
     steps:
@@ -19,6 +23,8 @@ jobs:
         with:
           python-version: "3.12"
 
+      # Only the *light* deps are installed: the cluster-free tests do not need
+      # PySpark/GX/Trino (those run elsewhere or are optional imports).
       - name: Install Python deps
         run: |
           python -m pip install --upgrade pip
@@ -30,6 +36,7 @@ jobs:
       - name: Ruff format check
         run: ruff format --check src tests scripts
 
+      # Spark tests skip on non-Linux runners here; they run in the job below.
       - name: Pytest (cluster-free; Spark tests run in the job below)
         run: pytest -q
 
@@ -57,6 +64,7 @@ jobs:
           helm template argocd argo/argo-cd --version 10.10.3 -n argocd \
             -f infra/helm/argocd/values.yaml > /dev/null
 
+      # Render every chart to a file so kubeconform can validate the manifests.
       - name: Render charts
         run: |
           mkdir -p /tmp/rendered
@@ -66,6 +74,8 @@ jobs:
           helm template spark-jobs infra/helm/spark-jobs --set month=2024-01 > /tmp/rendered/spark-jobs.yaml
           helm template lakehouse-trino infra/helm/trino > /tmp/rendered/trino.yaml
 
+      # kubeconform validates manifests against the real Kubernetes API schema.
+      # -ignore-missing-schemas skips CRDs it does not know (e.g. Argo CD).
       - name: kubeconform
         run: |
           curl -fSL -o /tmp/kubeconform.tar.gz \
@@ -76,6 +86,8 @@ jobs:
             /tmp/rendered/lakekeeper.yaml /tmp/rendered/spark-jobs.yaml \
             /tmp/rendered/trino.yaml
 
+  # Job 2: run the PySpark tests in the official Linux image. The host Windows
+  # runner cannot run them, and this needs no Kubernetes cluster.
   spark-tests:
     runs-on: ubuntu-latest
     steps:

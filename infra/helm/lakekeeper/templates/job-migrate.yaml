@@ -1,4 +1,5 @@
-# One-off schema migration (mirrors Lakekeeper's own compose: `migrate` before `serve`).
+# One-off schema migration for the Postgres catalog tables. Mirrors Lakekeeper's
+# own compose (`migrate` before `serve`); must finish before the server starts.
 apiVersion: batch/v1
 kind: Job
 metadata:

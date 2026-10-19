@@ -1,3 +1,5 @@
+# MinIO single-node Deployment: serves the S3 API (9000) and console (9001).
+# Data is persisted on the minio-data PVC; credentials come from the Secret.
 apiVersion: apps/v1
 kind: Deployment
 metadata:

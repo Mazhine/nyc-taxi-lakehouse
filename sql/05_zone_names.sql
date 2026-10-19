@@ -1,3 +1,6 @@
+-- Query 05: top 10 pickup zones by trip count, with readable names.
+-- Joins the fact table to the taxi_zones reference/dimension table on the raw
+-- location id, which is why the zones table must be loaded first.
 SELECT z.Zone AS pickup_zone,
        z.Borough AS borough,
        COUNT(*) AS trips,

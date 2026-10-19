@@ -1,6 +1,9 @@
 """Count rows (and per-source rows) of an Iceberg table via REST catalog.
 
-Runs on K8s (spark-runner image, --master local[*]) or any host with Spark.
+A tiny verification helper used right after a load to prove the ledger worked:
+the total should equal the sum of the monthly ``valid_rows`` and each
+``source_file`` should appear exactly once. It runs on K8s (spark-runner image,
+``--master local[*]``) or on any host with Spark.
 """
 
 from __future__ import annotations
@@ -22,7 +25,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Print JSON counts."""
+    """Print a JSON summary with the total and per-source counts."""
     from pyspark.sql import SparkSession
 
     args = parse_args(argv)
@@ -33,6 +36,7 @@ def main(argv: list[str] | None = None) -> int:
             "spark.sql.extensions",
             "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions",
         )
+        # Iceberg vectorized reads SIGSEGV on this JVM/JDK combination (D14).
         .config("spark.sql.iceberg.vectorization.enabled", "false")
         .config("spark.sql.catalog.lakekeeper", "org.apache.iceberg.spark.SparkCatalog")
         .config("spark.sql.catalog.lakekeeper.type", "rest")
