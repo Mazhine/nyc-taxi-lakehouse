@@ -83,12 +83,15 @@ by picking the most reasonable option and writing it here.
   `lakehouse` + `quarantine` created by a Job (`mc mb --ignore-existing`).
 - Hypothesis: S3A clients (Spark, Trino, PyIceberg) see no difference.
 
-## D10 — GitOps honnête sans remote
-- Context: Argo CD syncs from Git, but this repo has no remote yet (100 % local).
-- Choice: Argo CD installed with `infra/argocd/*` Application manifests ready;
-  `scripts/up.ps1` applies the SAME charts via Helm in the meantime.
-  No manual `kubectl` hidden: everything is in the repo. Once a remote exists,
-  `kubectl apply -f infra/argocd/root-app.yaml` enables full GitOps sync.
+## D10 — GitOps avec Argo CD (validé en direct le 2026-10-19)
+- Context: Argo CD synchronise depuis Git. Le dépôt est désormais publié sur
+  GitHub (`Mazhine/nyc-taxi-lakehouse`).
+- Choice: les manifestes `infra/argocd/*` pointent sur ce dépôt ; `scripts/up.ps1`
+  applique les MÊMES charts via Helm pour un rebuild en une commande. Ensuite,
+  `kubectl apply -f infra/argocd/root-app.yaml` laisse Argo adopter et maintenir
+  les ressources (app-of-apps).
+- Evidence: `experiments/phase11_argocd_sync.txt` — 5 applications
+  `Synced`/`Healthy` sur la révision synchronisée depuis GitHub.
 - Hypothesis: acceptable per rule 6 (no hidden manual config; limitation dite).
 
 ## D11 — Table pre-ingestion recréée (schéma corrigé)

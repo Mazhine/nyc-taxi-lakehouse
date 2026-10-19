@@ -3,5 +3,5 @@ Phase 10 pre-teardown state (2026-10-14, ~21:45 UTC):
 - helm releases: argocd (argo-cd-10.10.3/app 3.5.5), lakehouse-minio, lakehouse-postgres,
   lakehouse-lakekeeper, lakehouse-trino rev.2, spark-rbac
 - lakehouse ns pods: 22 lines (incl. Completed jobs/probes)
-- data: 20,015,099 trusted rows (6 months), 317,994 quarantined, zones 265
+- data: 20,015,099 trusted rows (6 months), 316,994 quarantined, zones 265
 - teardown: .\scripts\down.ps1 (terraform destroy)

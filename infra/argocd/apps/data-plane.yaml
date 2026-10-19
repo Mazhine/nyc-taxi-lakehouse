@@ -1,4 +1,4 @@
-# Data-plane Argo CD Applications: one per Helm chart, each owning a namespace.
+﻿# Data-plane Argo CD Applications: one per Helm chart, each owning a namespace.
 # Applied by the root app (app-of-apps). `automated.selfHeal/prune` means Argo
 # would revert manual cluster changes and delete removed resources once a Git
 # remote is reachable (see D10; up.ps1 applies these charts meanwhile).
@@ -10,7 +10,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/Mazhine/NYC-Taxi-Lakehouse-A-Reproducible-Measured-Data-Platform-in-a-Box.git
+    repoURL: https://github.com/Mazhine/nyc-taxi-lakehouse.git
     targetRevision: HEAD
     path: infra/helm/minio
   destination:
@@ -27,7 +27,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/Mazhine/NYC-Taxi-Lakehouse-A-Reproducible-Measured-Data-Platform-in-a-Box.git
+    repoURL: https://github.com/Mazhine/nyc-taxi-lakehouse.git
     targetRevision: HEAD
     path: infra/helm/postgres
   destination:
@@ -44,7 +44,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/Mazhine/NYC-Taxi-Lakehouse-A-Reproducible-Measured-Data-Platform-in-a-Box.git
+    repoURL: https://github.com/Mazhine/nyc-taxi-lakehouse.git
     targetRevision: HEAD
     path: infra/helm/lakekeeper
   destination:
@@ -61,7 +61,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/Mazhine/NYC-Taxi-Lakehouse-A-Reproducible-Measured-Data-Platform-in-a-Box.git
+    repoURL: https://github.com/Mazhine/nyc-taxi-lakehouse.git
     targetRevision: HEAD
     path: infra/helm/trino
   destination:
@@ -69,3 +69,4 @@ spec:
     namespace: lakehouse
   syncPolicy:
     automated: {prune: true, selfHeal: true}
+

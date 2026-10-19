@@ -2,9 +2,11 @@
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 # One-command rebuild from zero: cluster (Terraform) + data plane (Helm).
-# Argo CD is installed for GitOps visibility; app sync from Git requires a
-# remote (see docs/DECISIONS.md D10) - meanwhile this script applies the same
-# charts Argo CD will sync, so the source of truth stays the repo.
+# Argo CD is installed here; once the app-of-apps is applied
+# (kubectl apply -f infra/argocd/root-app.yaml) it syncs the same charts from
+# GitHub and adopts these resources (see docs/DECISIONS.md D10). This script
+# applies the charts directly so a rebuild does not depend on Argo being
+# reachable.
 # NOTE: plain "a/b" paths (forward slashes work on Windows PowerShell 5.1).
 $Root = Split-Path $PSScriptRoot -Parent
 # Pick up winget-installed tools without shell restart.

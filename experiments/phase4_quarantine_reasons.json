@@ -1,0 +1,69 @@
+{
+  "note": "Offline recomputation of the ingest rule logic over data/*.parquet (same expressions as src/ingestion/ingest.py).",
+  "input_rows": 20332093,
+  "quarantined_rows": 316994,
+  "quarantine_by_rule": {
+    "pickup_before_dropoff": 300,
+    "trip_distance_invalid": 0,
+    "fare_amount_invalid": 315747,
+    "total_amount_invalid": 257431,
+    "location_ids_invalid": 0
+  },
+  "rows_with_multiple_reasons": 256484,
+  "per_month": {
+    "2024-01": {
+      "input": 2964624,
+      "quarantined": 37624,
+      "pickup_before_dropoff": 56,
+      "trip_distance_invalid": 0,
+      "fare_amount_invalid": 37448,
+      "total_amount_invalid": 35504,
+      "location_ids_invalid": 0
+    },
+    "2024-02": {
+      "input": 3007526,
+      "quarantined": 40741,
+      "pickup_before_dropoff": 7,
+      "trip_distance_invalid": 0,
+      "fare_amount_invalid": 40655,
+      "total_amount_invalid": 36080,
+      "location_ids_invalid": 0
+    },
+    "2024-03": {
+      "input": 3582628,
+      "quarantined": 58723,
+      "pickup_before_dropoff": 117,
+      "trip_distance_invalid": 0,
+      "fare_amount_invalid": 58464,
+      "total_amount_invalid": 44311,
+      "location_ids_invalid": 0
+    },
+    "2024-04": {
+      "input": 3514289,
+      "quarantined": 57803,
+      "pickup_before_dropoff": 70,
+      "trip_distance_invalid": 0,
+      "fare_amount_invalid": 57568,
+      "total_amount_invalid": 43749,
+      "location_ids_invalid": 0
+    },
+    "2024-05": {
+      "input": 3723833,
+      "quarantined": 60180,
+      "pickup_before_dropoff": 42,
+      "trip_distance_invalid": 0,
+      "fare_amount_invalid": 59947,
+      "total_amount_invalid": 48992,
+      "location_ids_invalid": 0
+    },
+    "2024-06": {
+      "input": 3539193,
+      "quarantined": 61923,
+      "pickup_before_dropoff": 8,
+      "trip_distance_invalid": 0,
+      "fare_amount_invalid": 61665,
+      "total_amount_invalid": 48795,
+      "location_ids_invalid": 0
+    }
+  }
+}

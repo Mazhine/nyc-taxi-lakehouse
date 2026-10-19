@@ -35,7 +35,7 @@ Les résumés de phase sont ajoutés à la suite, au fil de l'eau.
 - **Pourquoi ce choix** : spark-submit client-mode sur K8s (driver dans le pod Job, 2 exécuteurs) ; idempotence par registre `source_file` + append (le MERGE global OOM sur 20 M lignes) ; contrats YAML + quarantaine bucket dédié.
 - **Comment ça marche** : image `spark-runner` (Spark 3.5.9 + jars Iceberg/S3A sur le classpath, Java 17) ; chaque Job lit `s3a://lakehouse/raw/`, normalise (casse/types), split valide/quarantaine, skip si déjà chargé. 6 mois 2024 ingérés.
 - **Comment ça s'assemble** : écrit dans le warehouse Lakekeeper créé en phase 3 ; Trino (phase 5) lira la même table ; quarantaine relue en phase 6.
-- **À retenir** : (1) 20 015 099 lignes valides + 317 994 en quarantaine (~1,6 %), rejeu 2024-01 = `skipped_already_loaded`, 0 fichier ajouté ; (2) jars `--packages` invisibles aux exécuteurs K8s → les baker dans l'image ; (3) lecteur vectorisé Iceberg = SIGSEGV JVM ici → désactivé et documenté (D14).
+- **À retenir** : (1) 20 015 099 lignes valides + 316 994 en quarantaine (~1,6 %) = 20 332 093 entrées, rejeu 2024-01 = `skipped_already_loaded`, 0 fichier ajouté ; (2) jars `--packages` invisibles aux exécuteurs K8s → les baker dans l'image ; (3) lecteur vectorisé Iceberg = SIGSEGV JVM ici → désactivé et documenté (D14).
 
 ## Phase 5 — Trino et requêtes de démonstration
 - **Rôle** : interroger la table Iceberg en SQL sans toucher à Spark.
@@ -79,3 +79,23 @@ Les résumés de phase sont ajoutés à la suite, au fil de l'eau.
 - **Comment ça s'assemble** : valide tous les scripts et le runbook de bout en bout ; preuves dans `experiments/phase10_*.txt`.
 - **À retenir** : (1) la phase 10 a trouvé 3 vrais bugs (Join-Path PS 5.1, CSV zones oublié, `param()` capricieux) ; (2) `2>&1 | Out-File` + `Stop` fait avorter sur le stderr natif — lancer plain ou `Start-Transcript` ; (3) résultats post-rebuild identiques à l'octet : 20 015 099 lignes.
 - **Rejeu du 2026-10-19** : `verify.ps1` passe 8/8 (rowcount, comptes mensuels, snapshots, 01/02/03/05) ; les zones (265 lignes) sont désormais chargées par `load-zones.ps1`, plus par un pod de debug. Preuve : `experiments/phase10_verify.txt`.
+
+## Préparation entretien — questions pointues
+
+### 1. Idempotence : crash entre l'écriture des données et le registre
+Le registre n'est pas un fichier séparé : `source_file` est une colonne de la table Iceberg, écrite **dans le même commit** que les lignes valides. Donc :
+- crash **avant** le commit Iceberg → aucune ligne visible, le rejeu recharge ;
+- crash **après** le commit → `source_file` est présent, le rejeu renvoie `skipped_already_loaded` et n'ajoute rien.
+Limite assumée : la quarantaine est écrite **avant** l'append, en mode append et sans clé d'idempotence. Un crash entre les deux peut donc dupliquer des lignes de quarantaine au rejeu ; la table de confiance reste exacte. Il n'y a pas de transaction 2PC entre S3 et Iceberg. Pour une atomicité stricte il faudrait une quarantaine en table Iceberg (ou un manifeste d'écriture) et un seul commit. `MERGE INTO` dédupliquerait au niveau ligne mais OOM ici (D13) : le ledger est un compromis *file-level*.
+
+### 2. Pourquoi la lecture vectorisée est désactivée, et l'effet sur les temps
+Ce n'est pas un choix de performance : le lecteur Arrow/vectorisé d'Iceberg provoque un SIGSEGV de la JVM sous WSL2/Docker avec ce JDK (D14). La lecture reste donc *row-based*, ce qui ajoute un surcoût par ligne et rend les temps Spark **pessimistes** par rapport à une configuration vectorisée. Les comparaisons before/after restent valides car les deux côtés utilisent le même réglage ; Trino a son propre lecteur et n'est pas concerné.
+
+### 3. Pourquoi la compaction gagne peu (4,97 → 3,49 s, stdev 1,89)
+- La requête ne lit qu'une tranche de mars : le *partition pruning* d'Iceberg évitait déjà la plupart des fichiers, donc passer de 27 à 2 fichiers aide peu cette requête-là.
+- 27 petits fichiers sont déjà lus en parallèle par 2 exécuteurs ; le gain porte surtout sur le surcoût par fichier et la pression sur les métadonnées.
+- L'écart-type avant (1,89 s) traduit des caches froids : la variance domine le gain.
+- La lecture row-based limite le débit. Conclusion honnête : la compaction réduit le nombre de fichiers et le coût de scan à long terme, pas forcément la latence d'une requête unique sur une petite tranche.
+
+### 4. Répartition des motifs de quarantaine
+`fare_amount_invalid` 315 747 ; `total_amount_invalid` 257 431 ; `pickup_before_dropoff` 300 ; `trip_distance_invalid` 0 ; `location_ids_invalid` 0 ; **316 994 lignes distinctes** ; 256 484 lignes cumulent plusieurs motifs. Les motifs se recouvrent (un montant négatif l'est souvent sur le fare *et* le total) : **ne pas additionner les lignes du tableau**. Presque tous les rejets sont des montants négatifs/nuls (remboursements, courses annulées) ; aucune distance ni aucun identifiant de zone invalide sur ces six mois. Artefact : `experiments/phase4_quarantine_reasons.json` (`scripts/quarantine-reasons.py`).

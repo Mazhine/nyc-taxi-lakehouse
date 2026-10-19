@@ -1,0 +1,199 @@
+
+=== 1/7 terraform: kind cluster ===
+[0m[1mInitializing the backend...[0m
+
+[0m[1mInitializing provider plugins...[0m
+- Reusing previous version of tehcyx/kind from the dependency lock file
+- Using previously-installed tehcyx/kind v0.9.0
+
+[0m[1m[32mTerraform has been successfully initialized![0m[32m[0m
+[0m[32m
+You may now begin working with Terraform. Try running "terraform plan" to see
+any changes that are required for your infrastructure. All Terraform commands
+should now work.
+
+If you ever set or change modules or backend configuration for Terraform,
+rerun this command to reinitialize your working directory. If you forget, other
+commands will detect it and remind you to do so if necessary.[0m
+[32m[1mSuccess![0m The configuration is valid.
+[0m
+[0m[1mkind_cluster.lakehouse: Refreshing state... [id=lakehouse-][0m
+
+[0m[1m[32mNo changes.[0m[1m Your infrastructure matches the configuration.[0m
+
+[0mTerraform has compared your real infrastructure against your configuration
+and found no differences, so no changes are needed.
+[0m[1m[32m
+Apply complete! Resources: 0 added, 0 changed, 0 destroyed.[0m
+[0m[1m[32m
+Outputs:
+
+[0mcluster_name = "lakehouse"
+kubeconfig = <sensitive>
+
+=== 2/7 helm repos ===
+
+=== 3/7 argocd ===
+Release "argocd" has been upgraded. Happy Helming!
+NAME: argocd
+LAST DEPLOYED: Mon Oct 19 17:37:42 2026
+NAMESPACE: argocd
+STATUS: deployed
+REVISION: 4
+DESCRIPTION: Upgrade complete
+TEST SUITE: None
+NOTES:
+In order to access the server UI you have the following options:
+
+1. kubectl port-forward service/argocd-server -n argocd 8080:443
+
+    and then open the browser on http://localhost:8080 and accept the certificate
+
+2. enable ingress in the values file `server.ingress.enabled` and either
+      - Add the annotation for ssl passthrough: https://argo-cd.readthedocs.io/en/stable/operator-manual/ingress/#option-1-ssl-passthrough
+      - Set the `configs.params."server.insecure"` in the values file and terminate SSL at your ingress: https://argo-cd.readthedocs.io/en/stable/operator-manual/ingress/#option-2-multiple-ingress-objects-and-hosts
+
+
+After reaching the UI the first time you can login with username: admin and the random password generated during the installation. You can find the password by running:
+
+kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d
+
+(You should delete the initial secret afterwards as suggested by the Getting Started Guide: https://argo-cd.readthedocs.io/en/stable/getting_started/#4-login-using-the-cli)
+deployment.apps/argocd-server condition met
+
+=== 4/7 storage + catalog (minio, postgres, lakekeeper) ===
+Release "lakehouse-minio" has been upgraded. Happy Helming!
+NAME: lakehouse-minio
+LAST DEPLOYED: Mon Oct 19 17:37:51 2026
+NAMESPACE: lakehouse
+STATUS: deployed
+REVISION: 4
+DESCRIPTION: Upgrade complete
+TEST SUITE: None
+Release "lakehouse-postgres" has been upgraded. Happy Helming!
+NAME: lakehouse-postgres
+LAST DEPLOYED: Mon Oct 19 17:37:51 2026
+NAMESPACE: lakehouse
+STATUS: deployed
+REVISION: 4
+DESCRIPTION: Upgrade complete
+TEST SUITE: None
+pod/minio-7fb6b87bdc-hz2mr condition met
+pod/postgres-585f85ccd-vvhps condition met
+Release "lakehouse-lakekeeper" has been upgraded. Happy Helming!
+NAME: lakehouse-lakekeeper
+LAST DEPLOYED: Mon Oct 19 17:37:52 2026
+NAMESPACE: lakehouse
+STATUS: deployed
+REVISION: 4
+DESCRIPTION: Upgrade complete
+TEST SUITE: None
+pod/lakekeeper-7c8469f7c5-xc7cx condition met
+
+=== 5/7 trino (official chart 1.44.0, app 483) ===
+Hang tight while we grab the latest from your chart repositories...
+...Successfully got an update from the "trino" chart repository
+...Successfully got an update from the "argo" chart repository
+Update Complete. ⎈Happy Helming!⎈
+Saving 1 charts
+Downloading trino from repo https://trinodb.github.io/charts
+Deleting outdated charts
+Release "lakehouse-trino" has been upgraded. Happy Helming!
+NAME: lakehouse-trino
+LAST DEPLOYED: Mon Oct 19 17:37:55 2026
+NAMESPACE: lakehouse
+STATUS: deployed
+REVISION: 4
+DESCRIPTION: Upgrade complete
+pod/lakehouse-trino-trino-coordinator-57d5564747-zzxfz condition met
+pod/lakehouse-trino-trino-worker-677bf69869-bjqll condition met
+
+=== 6/7 spark-runner image (build + kind load) ===
+#0 building with "desktop-linux" instance using docker driver
+
+#1 [internal] load build definition from spark-runner.Dockerfile
+#1 transferring dockerfile: 3.25kB 0.0s done
+#1 DONE 0.0s
+
+#2 [internal] load metadata for docker.io/apache/spark:3.5.9
+#2 DONE 0.1s
+
+#3 [internal] load .dockerignore
+#3 transferring context: 2B done
+#3 DONE 0.0s
+
+#4 [1/8] FROM docker.io/apache/spark:3.5.9@sha256:af02a459c8706e031c835c16f9db3c463816776e2543dd0f828af65606bcf392
+#4 resolve docker.io/apache/spark:3.5.9@sha256:af02a459c8706e031c835c16f9db3c463816776e2543dd0f828af65606bcf392 0.0s done
+#4 DONE 0.0s
+
+#5 [internal] load build context
+#5 transferring context: 1.34kB done
+#5 DONE 0.0s
+
+#6 [7/8] COPY contracts /opt/spark/jobs/contracts
+#6 CACHED
+
+#7 [6/8] COPY src /opt/spark/jobs/src
+#7 CACHED
+
+#8 [2/8] RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates  && rm -rf /var/lib/apt/lists/*  && curl -fSL -o /tmp/jre17.tgz       https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.20.1%2B1/OpenJDK17U-jre_x64_linux_hotspot_17.0.20.1_1.tar.gz  && mkdir -p /opt/java17 && tar -xzf /tmp/jre17.tgz -C /opt/java17 --strip-components=1  && rm /tmp/jre17.tgz && /opt/java17/bin/java -version
+#8 CACHED
+
+#9 [3/8] RUN python3 -m pip install --no-cache-dir pyyaml
+#9 CACHED
+
+#10 [4/8] RUN /opt/spark/bin/spark-submit --packages "org.apache.iceberg:iceberg-spark-runtime-3.5_2.12:1.6.1,org.apache.iceberg:iceberg-aws-bundle:1.6.1,org.apache.hadoop:hadoop-aws:3.3.4,com.amazonaws:aws-java-sdk-bundle:1.12.262" --master local       --class org.apache.spark.examples.SparkPi       local:///opt/spark/examples/jars/spark-examples_2.12-3.5.9.jar 1
+#10 CACHED
+
+#11 [5/8] RUN mkdir -p /opt/spark/extra-jars &&     cp /root/.ivy2/jars/org.apache.iceberg_iceberg-spark-runtime-3.5_2.12-1.6.1.jar        /opt/spark/extra-jars/iceberg-spark-runtime-3.5_2.12-1.6.1.jar &&     cp /root/.ivy2/jars/org.apache.iceberg_iceberg-aws-bundle-1.6.1.jar        /opt/spark/extra-jars/iceberg-aws-bundle-1.6.1.jar &&     cp /root/.ivy2/jars/org.apache.hadoop_hadoop-aws-3.3.4.jar        /opt/spark/extra-jars/hadoop-aws-3.3.4.jar &&     cp /root/.ivy2/jars/com.amazonaws_aws-java-sdk-bundle-1.12.262.jar        /opt/spark/extra-jars/aws-java-sdk-bundle-1.12.262.jar &&     cp /root/.ivy2/jars/org.wildfly.openssl_wildfly-openssl-1.0.7.Final.jar        /opt/spark/extra-jars/wildfly-openssl-1.0.7.Final.jar &&     cp /opt/spark/extra-jars/*.jar /opt/spark/jars/ &&     ls /opt/spark/jars | grep -E "iceberg|hadoop-aws|aws-java|wildfly"
+#11 CACHED
+
+#12 [8/8] WORKDIR /opt/spark/jobs
+#12 CACHED
+
+#13 exporting to image
+#13 exporting layers 0.0s done
+#13 exporting manifest sha256:c14c9dc89ec856a9727a01ea72af20071651b149c5b512f5290521b057ff46cb done
+#13 exporting config sha256:26d3311e50ec05b263e6860ea54aa98221dddc0278922b7708c23e4b1c4a91e9 done
+#13 exporting attestation manifest sha256:76677ed421f22c2e3431e1e8324cd2f396ed96bf593a5af31a3751e74e52b0f3
+#13 exporting attestation manifest sha256:76677ed421f22c2e3431e1e8324cd2f396ed96bf593a5af31a3751e74e52b0f3 0.1s done
+#13 exporting manifest list sha256:c972908305b8b4e79dfc7396d05cc98d1812ce87740eab5294927687f2c64880 0.1s done
+#13 naming to docker.io/lakehouse/spark-runner:3.5.9-0.1.0
+#13 naming to docker.io/lakehouse/spark-runner:3.5.9-0.1.0 done
+#13 unpacking to docker.io/lakehouse/spark-runner:3.5.9-0.1.0 0.0s done
+#13 DONE 0.3s
+
+View build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/xgcsmmgikiwkab6j8fiyvp0g7
+Image: "lakehouse/spark-runner:3.5.9-0.1.0" with ID "sha256:c972908305b8b4e79dfc7396d05cc98d1812ce87740eab5294927687f2c64880" not yet present on node "lakehouse-control-plane", loading...
+serviceaccount/spark unchanged
+role.rbac.authorization.k8s.io/spark unchanged
+rolebinding.rbac.authorization.k8s.io/spark unchanged
+
+=== 7/7 catalog bootstrap (warehouse is automatic; namespace/table via REST) ===
+job.batch/lakekeeper-bootstrap condition met
+table exists, loaded (TableAlreadyExistsError)
+{
+  "catalog_uri": "http://localhost:8181/catalog",
+  "warehouse": "warehouse",
+  "namespaces": [
+    [
+      "nyc"
+    ]
+  ],
+  "tables_in_nyc": [
+    [
+      "nyc",
+      "yellow_trips"
+    ],
+    [
+      "nyc",
+      "taxi_zones"
+    ]
+  ],
+  "table_location": "s3://lakehouse/iceberg/01a15536-4978-7092-990e-ca2c65672217",
+  "table_schema": "table {\n  1: VendorID: optional long\n  2: tpep_pickup_datetime: required timestamp\n  3: tpep_dropoff_datetime: required timestamp\n  4: passenger_count: optional long\n  5: trip_distance: required double\n  6: PULocationID: required long\n  7: DOLocationID: required long\n  8: payment_type: optional long\n  9: fare_amount: required double\n  10: tip_amount: optional double\n  11: total_amount: required double\n  12: source_file: optional string\n  13: row_hash: optional string\n}",
+  "created_now": false,
+  "pyiceberg_version": "0.12.0"
+}
+
+up: DONE. Next: scripts/upload-raw.py, then scripts/run-ingest.ps1 per month.

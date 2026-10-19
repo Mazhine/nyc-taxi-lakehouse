@@ -46,10 +46,27 @@ def main() -> int:
     # Expected per-source counts come from the committed ingest summaries, so
     # the "truth" is the ingestion output, not a hard-coded number.
     expected: dict[str, int] = {}
+    quarantine_total = 0
+    input_total = 0
     for path in sorted(args.reference_dir.glob("phase4_ingest_*.json")):
         data = load(path)
         expected[data["source_file"]] = int(data["valid_rows"])
+        pin = int(data["input_rows"])
+        pv = int(data["valid_rows"])
+        pq = int(data["quarantined_rows"])
+        input_total += pin
+        quarantine_total += pq
+        # Conservation per source: nothing is silently dropped or invented.
+        check(
+            pin == pv + pq,
+            f"conservation {data['source_file']}: input {pin} == valid {pv} + quarantine {pq}",
+        )
     total = sum(expected.values())
+    # Conservation overall: every input row is either kept or quarantined.
+    check(
+        input_total == total + quarantine_total,
+        f"conservation total: input {input_total} == valid {total} + quarantine {quarantine_total}",
+    )
 
     # --- Structural checks on the candidate run.
     rowcount = load(args.candidate_dir / "phase5_01_rowcount.json")

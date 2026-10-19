@@ -62,3 +62,28 @@ def test_tampered_query_result_fails(tmp_path: Path) -> None:
     result = run_verifier(candidate)
     assert result.returncode == 1
     assert "FAIL 03_top_pickup_zones" in result.stdout
+
+
+def test_conservation_break_is_detected(tmp_path: Path) -> None:
+    """input != valid + quarantine must fail the conservation check."""
+    reference = tmp_path / "reference"
+    shutil.copytree(REFERENCE, reference)
+    path = reference / "phase4_ingest_2024-01.json"
+    data = json.loads(path.read_text(encoding="utf-8"))
+    data["quarantined_rows"] += 1
+    path.write_text(json.dumps(data), encoding="utf-8")
+
+    candidate = tmp_path / "candidate"
+    candidate.mkdir()
+    for result_path in reference.glob("phase5_*.json"):
+        shutil.copy2(result_path, candidate / result_path.name)
+
+    result = subprocess.run(
+        [sys.executable, str(SCRIPT), str(candidate), "--reference-dir", str(reference)],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        check=False,
+    )
+    assert result.returncode == 1
+    assert "FAIL conservation" in result.stdout
