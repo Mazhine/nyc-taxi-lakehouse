@@ -1,0 +1,25 @@
+﻿Argo CD live GitOps sync - captured 2026-10-19 21:38:54
+Repository: https://github.com/Mazhine/nyc-taxi-lakehouse
+
+== argocd-server image ==
+quay.io/argoproj/argocd:v3.5.5
+
+== applications ==
+NAME                   SYNC STATUS   HEALTH STATUS   REVISION                                   PROJECT
+lakehouse-lakekeeper   Synced        Healthy         11bcb356a30476e2966b303f20e1f4711adf8401   default
+lakehouse-minio        Synced        Healthy         11bcb356a30476e2966b303f20e1f4711adf8401   default
+lakehouse-postgres     Synced        Healthy         11bcb356a30476e2966b303f20e1f4711adf8401   default
+lakehouse-root         Synced        Healthy         11bcb356a30476e2966b303f20e1f4711adf8401   default
+lakehouse-trino        Synced        Healthy         11bcb356a30476e2966b303f20e1f4711adf8401   default
+
+== root app status ==
+sync.status   = Synced
+health.status = Healthy
+revision      = 11bcb356a30476e2966b303f20e1f4711adf8401
+operation     = Succeeded at 2026-10-19T21:38:25Z
+
+== root app managed resources ==
+Application/lakehouse-lakekeeper  sync=Synced
+Application/lakehouse-minio  sync=Synced
+Application/lakehouse-postgres  sync=Synced
+Application/lakehouse-trino  sync=Synced
