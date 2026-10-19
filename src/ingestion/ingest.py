@@ -2,8 +2,8 @@
 
 Contract-driven: schema drift (renames/case/type changes) is normalized and
 logged; missing required columns quarantine the whole file; rows violating
-rules go to quarantine with a reason. Writes use MERGE on
-(source_file, row_hash), so replaying a file creates no duplicates.
+rules go to quarantine with a reason. Idempotency is file-level: a ledger
+(DISTINCT source_file) skips replays, otherwise valid rows append (D13).
 
 Local example:
   python src/ingestion/ingest.py --input data/yellow_tripdata_2024-01.parquet \\

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import argparse
 import json
 from pathlib import Path
 
@@ -25,8 +26,12 @@ def run_query(sql: str) -> tuple[list[str], list[list]]:
 
 
 def main() -> None:
-    """Run every sql/*.sql file; write experiments/phase5_<name>.json."""
-    exp = ROOT / "experiments"
+    """Run every sql/*.sql file; write <out-dir>/phase5_<name>.json."""
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--out-dir", default=str(ROOT / "experiments"))
+    args = parser.parse_args()
+    exp = Path(args.out_dir)
+    exp.mkdir(parents=True, exist_ok=True)
     for path in sorted((ROOT / "sql").glob("*.sql")):
         sql = path.read_text(encoding="utf-8").strip().rstrip(";")
         cols, rows = run_query(sql)

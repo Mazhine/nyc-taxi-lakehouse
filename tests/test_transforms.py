@@ -1,4 +1,4 @@
-"""Transform/idempotency tests (pure-python; Spark-local tests land in Phase 4)."""
+"""Transform/idempotency tests (pure-python; Spark-local tests in test_ingest_spark)."""
 
 from src.ingestion.ingest import build_merge_sql, row_hash, should_skip
 

@@ -22,7 +22,7 @@ jobs:
       - name: Install Python deps
         run: |
           python -m pip install --upgrade pip
-          pip install ruff pytest pyyaml
+          pip install ruff==0.17.0 pytest==9.1.1 pyyaml==6.0.3
 
       - name: Ruff
         run: ruff check src tests scripts
@@ -30,7 +30,7 @@ jobs:
       - name: Ruff format check
         run: ruff format --check src tests scripts
 
-      - name: Pytest (Spark tests skip without pyspark; cluster-free)
+      - name: Pytest (cluster-free; Spark tests run in the job below)
         run: pytest -q
 
       - name: Terraform fmt/validate
@@ -75,3 +75,13 @@ jobs:
             /tmp/rendered/minio.yaml /tmp/rendered/postgres.yaml \
             /tmp/rendered/lakekeeper.yaml /tmp/rendered/spark-jobs.yaml \
             /tmp/rendered/trino.yaml
+
+  spark-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Spark transform tests (official Linux image, no cluster)
+        run: |
+          docker run --rm --user root -e HOME=/tmp -v "$PWD":/work -w /work \
+            -e SPARK_LOCAL_IP=127.0.0.1 \
+            apache/spark:3.5.9 bash /work/scripts/ci-spark-tests.sh

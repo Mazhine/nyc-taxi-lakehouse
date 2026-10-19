@@ -78,3 +78,4 @@ Les résumés de phase sont ajoutés à la suite, au fil de l'eau.
 - **Comment ça marche** : destroy vérifié (plus de cluster, plus de conteneurs) ; rebuild : cluster, Argo CD, MinIO, Postgres, Lakekeeper, Trino, image Spark + RBAC, namespace/table ; reload : upload-raw + 6 Jobs + zones ; rowcount final.
 - **Comment ça s'assemble** : valide tous les scripts et le runbook de bout en bout ; preuves dans `experiments/phase10_*.txt`.
 - **À retenir** : (1) la phase 10 a trouvé 3 vrais bugs (Join-Path PS 5.1, CSV zones oublié, `param()` capricieux) ; (2) `2>&1 | Out-File` + `Stop` fait avorter sur le stderr natif — lancer plain ou `Start-Transcript` ; (3) résultats post-rebuild identiques à l'octet : 20 015 099 lignes.
+- **Rejeu du 2026-10-19** : `verify.ps1` passe 8/8 (rowcount, comptes mensuels, snapshots, 01/02/03/05) ; les zones (265 lignes) sont désormais chargées par `load-zones.ps1`, plus par un pod de debug. Preuve : `experiments/phase10_verify.txt`.

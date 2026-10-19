@@ -9,10 +9,10 @@
   installs so PATH picks them up (scripts also refresh PATH themselves).
 - Cap WSL2 so Windows keeps breathing (project Phase 0 created this):
   `~/.wslconfig` with `memory=20GB`, `processors=8`, `swap=4GB`.
-- Python env: `python -m venv .venv; .\.venv\Scripts\python -m pip install
-  ruff pytest pyyaml pandas pyarrow boto3 trino great-expectations`
-  (Spark runs in-cluster; host Spark is not required).
-- `Copy-Item .env.example .env` (demo-local credentials, never committed).
+- Python env: `python -m venv .venv; .\.venv\Scripts\python -m pip install -r
+  requirements.txt` (pinned; Spark runs in-cluster, host Spark is not required).
+- Credentials are demo-local and fixed in the chart values. To use other
+  values, pass `--set` to the corresponding `helm` command; there is no `.env`.
 
 ## 1. Start (one command)
 
@@ -28,25 +28,31 @@ Trino chart → waits + smoke logs.
 ## 2. Load data
 
 ```powershell
-.\.venv\Scripts\python.exe scripts\upload-raw.py     # data/*.parquet -> s3://lakehouse/raw/
+.\.venv\Scripts\python.exe scripts\upload-raw.py     # data/*.parquet + zone CSV -> s3://lakehouse/raw/
 .\scripts\run-ingest.ps1 2024-01                    # positional month arg; repeat 02..06
+.\scripts\load-zones.ps1                            # reference table (idempotent)
 ```
 
 Each Job validates against `contracts/yellow_trips.v1.yaml`, appends valid
 rows to `lakekeeper.nyc.yellow_trips`, writes invalid rows to
 `s3://quarantine/yellow_trips/` with `_quarantine_reason`.
 Re-running a month is a no-op (`skipped_already_loaded`).
-Reference table: `src/ingestion/load_zones.py` via `scripts/submit-probe.sh`
-(debug pod only).
+`load-zones.ps1` loads `taxi_zone_lookup.csv` into `lakekeeper.nyc.taxi_zones`
+(265 rows; skips when the table already exists).
 
 ## 3. Query / quality / benchmarks
 
 ```powershell
+.\scripts\verify.ps1                                  # acceptance check (read-only)
 .\.venv\Scripts\python.exe scripts\trino-query.py     # Trino on localhost:8080
 .\.venv\Scripts\python.exe scripts\run-quality.py     # GX (needs MinIO on localhost:9000)
-.\.venv\Scripts\python.exe scripts\bench-iceberg.py   # Iceberg demos + timings
+.\scripts\bench.ps1                                   # Iceberg demos + timings
 .\.venv\Scripts\python.exe scripts\export-lineage.py  # static provenance
 ```
+
+`verify.ps1` re-runs every `sql/*.sql` into a temp dir and compares with
+`experiments/` (rowcount, monthly counts, snapshot totals, deterministic
+queries). Run it after a rebuild + reload; exit code 1 means a mismatch.
 
 ## 4. Stop / full reset
 

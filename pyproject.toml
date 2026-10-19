@@ -1,17 +1,27 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "lakehouse-platform"
 version = "0.1.0"
 requires-python = ">=3.12"
 dependencies = [
+  "boto3==1.43.113",
+  "great-expectations==1.24.0",
+  "pandas==3.0.6",
+  "pyarrow==26.0.0",
+  "pyiceberg==0.12.0",
   "pyspark==3.5.9",
-  "pyarrow==18.1.0",
-  "pandas==2.2.3",
-  "pyyaml==6.0.2",
+  "pyyaml==6.0.3",
+  "trino==0.340.0",
 ]
 
 [project.optional-dependencies]
-dev = ["pytest==8.3.4", "ruff==0.9.9"]
-quality = ["great-expectations==1.24.0"]
+dev = ["pytest==9.1.1", "ruff==0.17.0"]
+
+[tool.setuptools]
+packages = ["src", "src.benchmarks", "src.ingestion", "src.maintenance", "src.quality", "src.quarantine"]
 
 [tool.ruff]
 target-version = "py312"

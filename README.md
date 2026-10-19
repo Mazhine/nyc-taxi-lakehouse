@@ -63,31 +63,34 @@ flowchart LR
 ## Quickstart (Windows PowerShell)
 
 ```powershell
-Copy-Item .env.example .env   # demo-local credentials only
 .\scripts\download-data.ps1   # TLC parquet -> data/ (git-ignored, ~500 MB)
-.\scripts\up.ps1              # cluster + Argo CD + MinIO + Postgres + Lakekeeper + Trino
+.\scripts\up.ps1              # 7 steps: cluster + Argo CD + MinIO + Postgres + Lakekeeper + Trino + Spark image
 .\scripts\test.ps1            # ruff, pytest, terraform, helm lint + render (no cluster)
 .\scripts\down.ps1            # terraform destroy (data volumes go with the cluster)
 ```
 
-Load data (inside the cluster, one Job per month):
+Credentials are demo-local and fixed in the chart values (`minioadmin` /
+`minioadmin-local-demo-only`); pass `--set` to override. No `.env` needed.
+Load data (one Kubernetes Job per month):
 
 ```powershell
-.\scripts\run-ingest.ps1 -Month 2024-01   # repeat for 02..06 (or all, in order)
+.\scripts\run-ingest.ps1 2024-01   # positional month; repeat for 02..06, in order
+.\scripts\load-zones.ps1           # 265-row reference table used by sql/05_zone_names.sql
 ```
 
-Query + measure:
+Query, verify and measure:
 
 ```powershell
+.\scripts\verify.ps1                                  # acceptance: rowcount + identical SQL results
 .\.venv\Scripts\python.exe scripts\trino-query.py     # sql/*.sql -> experiments/phase5_*.json
 .\.venv\Scripts\python.exe scripts\run-quality.py     # GX gates -> experiments/phase6_*.json
-.\.venv\Scripts\python.exe scripts\bench-iceberg.py   # demos + benchmarks -> experiments/phase7_*.json
+.\scripts\bench.ps1                                   # Iceberg demos + benchmarks -> experiments/phase7_*.json
 ```
 
 Docs: `docs/RUNBOOK.md` (operate), `docs/DECISIONS.md` (choices),
 `docs/LEARNING_NOTES.md` (per-phase notes in French).
 
-## Measured results (same machine, 2026-10-14)
+## Measured results (same machine, 2026-10)
 
 Dataset: 6 yellow-taxi months (2024-01..06), 20 332 093 input rows →
 **20 015 099 trusted rows** + 317 994 quarantined (~1.6 %).
@@ -108,6 +111,8 @@ Engines: Spark 3.5.9 (2 exec × 3 Go, row-based Iceberg reads), Trino 483
 | 10 | Expire snapshots (1 h demo retention) | 8 snapshots | 1 snapshot (2.5 s) | `phase7_expire.json` |
 | 11 | GX trusted sample (200 k rows, 7 expectations) | — | 100 % pass | `phase6_quality.json` |
 | 12 | GX quarantine sample (20 k rows, negative control) | — | fails as expected (`fare_amount`, `total_amount`) | `phase6_quality.json` |
+| 13 | Full teardown + rebuild (`down` → `up` → reload) | 20 015 099 rows | 7/7 steps, all checks pass | `phase10_rebuild.txt`, `verify.ps1` |
+| 14 | Acceptance check on a fresh rebuild (`verify.ps1`) | — | 8/8 PASS, 20 015 099 rows, 6 snapshots | `phase10_verify.txt` |
 
 Caveats: Trino and Spark read the same table but are different engines (times
 not comparable across engines); "before" stdev is inflated by cold caches;
@@ -124,7 +129,7 @@ full-vs-incremental slices differ by month (sizes within 1.5 %).
   static provenance in `experiments/phase8_lineage.json` instead — D18).
 - Argo CD syncs from Git only after a remote is added (D10); `up.ps1` applies
   the same charts until then.
-- CI has no cluster (lint/unit/render/kubeconform only); Spark container tests
-  run on demand, not in CI.
+- CI has no cluster (lint/unit/render/kubeconform + Spark container tests);
+  a full `up.ps1` + ingest run is not automated in CI.
 - TLC `airport_fee`→`Airport_fee` rename + int32/int64 drift handled by
   case-insensitive normalization; full historical backfill not tested.

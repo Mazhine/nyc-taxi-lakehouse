@@ -177,3 +177,32 @@ by picking the most reasonable option and writing it here.
   depuis ces artefacts mesurés (14 nœuds, 29 arêtes, rien d'inventé).
 - Pour l'ajouter un jour : chart `ilum/marquez` 0.54.0 + `postgresql.enabled`,
   listener OpenLineage dans l'image spark-runner, +4 Gio de limites min.
+
+## D19 - Vérification d'acceptation automatique + nettoyage de dette
+- Context: la phase 10 validait le rebuild à la main (`git diff` des JSON) ;
+  le dépôt gardait des restes obsolètes : `requirements.txt` vide, `bench.ps1`
+  en stub, `.env` jamais lu, README avec `-Month` (syntaxe qui échoue).
+- Choice: `scripts/verify.ps1` relance `sql/*.sql` dans un dossier temporaire
+  et compare avec `experiments/` via `scripts/verify-results.py` (rowcount,
+  comptes mensuels, total du dernier snapshot, requêtes déterministes 01/02/03/05).
+  Code retour 1 au moindre écart. Les 3 tests Spark tournent en CI via
+  `scripts/ci-spark-tests.sh` (image `apache/spark:3.5.9`). `.env.example`
+  supprimé (credentials démo fixes dans les charts) ; `requirements.txt` pinné
+  sur l'environnement vérifié ; `bench.ps1` délègue à `bench-iceberg.py`.
+- Hypothesis: 01/02/03/05 sont déterministes ; 04 est comparée structurellement
+  car les ids/timestamps de snapshots changent à chaque rebuild.
+- Validé le 2026-10-19 sur un rebuild complet : 8/8 PASS, 20 015 099 lignes
+  (`experiments/phase10_verify.txt`).
+
+## D20 - Chargement des zones comme Job de première classe
+- Context: en phase 10, `nyc.taxi_zones` était chargée à la main dans un pod de
+  debug (`submit-probe.sh`). Un rebuild propre passait donc `verify.ps1` seulement
+  si l'opérateur se souvenait de cette étape manuelle, et `sql/05_zone_names.sql`
+  échouait sinon.
+- Choice: `infra/helm/spark-jobs/templates/job-zones.yaml` + `scripts/load-zones.ps1`
+  (même image, même RBAC, `helm template | kubectl apply`). Le script est
+  idempotent : `load_zones.py` sort 0 si la table existe déjà.
+- Consequence: le runbook est entièrement scripté (`up` → `upload-raw` →
+  6 × `run-ingest` → `load-zones` → `verify`) et la jointure des 265 zones est
+  reproductible sans intervention manuelle.
+

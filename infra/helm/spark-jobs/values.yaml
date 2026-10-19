@@ -16,3 +16,5 @@ s3AccessKey: minioadmin
 s3SecretKey: minioadmin-local-demo-only
 contractPath: /opt/spark/jobs/contracts/yellow_trips.v1.yaml
 quarantinePath: s3a://quarantine/yellow_trips
+zonesTable: lakekeeper.nyc.taxi_zones
+zonesInput: s3a://lakehouse/raw/taxi_zone_lookup.csv

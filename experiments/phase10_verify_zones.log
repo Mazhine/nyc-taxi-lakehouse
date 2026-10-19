@@ -1,0 +1,25 @@
+﻿**********************
+Début de la transcription Windows PowerShell
+Heure de début : 20261019165453
+Nom d'utilisateur : MAZINE\mazin
+Utilisateur runAs :  MAZINE\mazin
+Nom de la configuration : 
+Ordinateur : MAZINE (Microsoft Windows NT 10.0.26200.0)
+Application hôte : C:\WINDOWS\System32\WindowsPowerShell\v1.0\powershell.EXE -NoLogo -NoProfile -NonInteractive -Command Start-Transcript -Path "experiments\phase10_verify_zones.log" -Force | Out-Null; try { .\scripts\load-zones.ps1 } finally { Stop-Transcript | Out-Null }
+ID de processus : 19928
+PSVersion: 5.1.26100.9711
+PSEdition: Desktop
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1.26100.9711
+BuildVersion: 10.0.26100.9711
+CLRVersion: 4.0.30319.42000
+WSManStackVersion: 3.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+**********************
+
+
+
+**********************
+Fin de la transcription Windows PowerShell
+Heure de fin : 20261019165510
+**********************

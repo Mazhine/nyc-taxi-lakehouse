@@ -1,0 +1,57 @@
+﻿**********************
+Début de la transcription Windows PowerShell
+Heure de début : 20261019164556
+Nom d'utilisateur : MAZINE\mazin
+Utilisateur runAs :  MAZINE\mazin
+Nom de la configuration : 
+Ordinateur : MAZINE (Microsoft Windows NT 10.0.26200.0)
+Application hôte : C:\WINDOWS\System32\WindowsPowerShell\v1.0\powershell.EXE -NoLogo -NoProfile -NonInteractive -Command Start-Transcript -Path "experiments\phase10_verify_up.log" -Force | Out-Null; try { .\scripts\up.ps1 } finally { Stop-Transcript | Out-Null }
+ID de processus : 47932
+PSVersion: 5.1.26100.9711
+PSEdition: Desktop
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1.26100.9711
+BuildVersion: 10.0.26100.9711
+CLRVersion: 4.0.30319.42000
+WSManStackVersion: 3.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+**********************
+
+=== 1/7 terraform: kind cluster ===
+
+
+
+
+=== 2/7 helm repos ===
+
+=== 3/7 argocd ===
+
+
+
+=== 4/7 storage + catalog (minio, postgres, lakekeeper) ===
+
+
+
+
+
+
+
+=== 5/7 trino (official chart 1.44.0, app 483) ===
+
+
+
+
+=== 6/7 spark-runner image (build + kind load) ===
+
+
+
+
+=== 7/7 catalog bootstrap (warehouse is automatic; namespace/table via REST) ===
+
+
+
+up: DONE. Next: scripts/upload-raw.py, then scripts/run-ingest.ps1 per month.
+**********************
+Fin de la transcription Windows PowerShell
+Heure de fin : 20261019165317
+**********************

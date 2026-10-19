@@ -1,6 +1,10 @@
 #Requires -Version 5.1
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
-# Benchmarks (needs the stack up). Raw outputs go to experiments/.
-Write-Host "bench: not implemented until Phase 7 (stack required)."
-exit 0
+# Benchmarks need the stack up + data loaded (see docs/RUNBOOK.md).
+# Delegates to scripts/bench-iceberg.py; outputs go to experiments/.
+$Root = Split-Path $PSScriptRoot -Parent
+$Python = "$Root/.venv/Scripts/python.exe"
+if (-not (Test-Path $Python)) { throw "venv missing: run the setup in docs/RUNBOOK.md" }
+& $Python "$Root/scripts/bench-iceberg.py"
+exit $LASTEXITCODE
