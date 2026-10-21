@@ -117,6 +117,26 @@ by picking the most reasonable option and writing it here.
   `build_merge_sql()` stays as a tested utility for future upsert tables.
 - Hypothesis: DISTINCT scan of one narrow column stays cheap; verified by replay.
 
+### Crash semantics (atomicity) — English summary
+The load is **not** one atomic transaction across S3 and Iceberg; the guarantees
+are deliberately uneven:
+- **Trusted rows + ledger key commit together.** The `source_file` column is
+  written in the same Iceberg append as the valid rows, so a successful commit
+  always records which file it came from. A crash *before* the commit leaves no
+  trusted rows and no ledger entry; replaying the file is safe.
+- **Quarantine is written first and has no idempotency key.** A crash between
+  the quarantine write and the Iceberg commit leaves orphan quarantine rows;
+  replaying the file appends them again. The trusted table stays correct, but
+  quarantine is **at-least-once**, not exactly-once.
+- **No two-phase commit** exists between S3 (quarantine) and Iceberg (trusted).
+  Iceberg's own snapshot commit is atomic; the cross-zone write is not. For
+  exactly-once quarantine we would add `(source_file, row_hash)` keys, write to
+  a staging prefix, and promote only after the Iceberg commit (or use the
+  tested `MERGE INTO` path on a small quarantine table).
+- **Replay is a no-op** once the append succeeded: the ledger is read from the
+  table itself (`SELECT DISTINCT source_file`), so it cannot drift from the
+  data it describes.
+
 ## D14 — Lecteur vectorisé Iceberg désactivé + Java 17 + ParallelGC
 - Context: toute lecture de la table Iceberg via Spark tuait les exécuteurs
   (exit 134, SIGSEGV libjvm : `G1BarrierSet`, `ciType::make`, `SymbolTable`),
@@ -208,4 +228,33 @@ by picking the most reasonable option and writing it here.
 - Consequence: le runbook est entièrement scripté (`up` → `upload-raw` →
   6 × `run-ingest` → `load-zones` → `verify`) et la jointure des 265 zones est
   reproductible sans intervention manuelle.
+
+## D21 - Montants négatifs : quarantaine, pas « mauvaise donnée » par nature
+- Context: 315 747 lignes (99,6 % de la quarantaine) ont un `fare_amount`
+  négatif ou nul ; 257 431 déclenchent aussi la règle `total_amount_invalid`
+  (négatif ou nul). Dans les données TLC, un montant négatif peut correspondre à
+  un remboursement, une contestation, une correction ou une course annulée —
+  donc à une opération légitime, pas forcément à une erreur de saisie (à
+  confirmer sur `payment_type`, `VendorID`, `RatecodeID`).
+- Options: (a) garder ces lignes dans la table de confiance avec un drapeau
+  `is_refund` ; (b) les isoler dans une table `refunds` ; (c) les mettre en
+  quarantaine avec la raison (choix actuel).
+- Choice: **(c)** pour cette version. Le contrat impose `fare_amount >= 0` et
+  aucun champ fiable ne permet de distinguer un remboursement d'une erreur ;
+  mélanger les négatifs aux agrégats de revenus les fausserait silencieusement.
+  La quarantaine est réversible : les fichiers bruts et les lignes rejetées sont
+  conservés, donc on peut reclasser plus tard sans rejouer les sources.
+- Consequence: la table de confiance représente des courses terminées à montant
+  positif ; les métriques de revenu ne sont **pas** un revenu net (les
+  remboursements sont exclus). Prochaine étape documentée : classifier les
+  négatifs par `payment_type`/`VendorID`, puis soit ajouter `is_refund`, soit
+  créer une table `refunds` et exposer les deux dans Trino.
+- Réponse d'entretien: « 99,6 % de ma quarantaine, ce sont des montants
+  négatifs. Ce ne sont pas nécessairement de mauvaises données : à NYC, un
+  négatif peut être un remboursement ou une correction. Je les ai isolés parce
+  que mon contrat exige un montant positif et que je ne peux pas distinguer un
+  remboursement d'une erreur avec les colonnes disponibles ; les inclure aurait
+  faussé les sommes de revenus. Le choix est réversible — les données brutes et
+  la quarantaine sont conservées — et la suite serait de les classer par
+  `payment_type`, puis d'exposer une table de remboursements séparée. »
 

@@ -10,7 +10,7 @@
 ![MinIO](https://img.shields.io/badge/MinIO-S3_Compatible-C72E49?logo=minio&logoColor=white)
 ![Terraform](https://img.shields.io/badge/Terraform-1.16.5-7B42BC?logo=terraform&logoColor=white)
 ![Argo CD](https://img.shields.io/badge/Argo_CD-3.5.5-EF7B4D?logo=argo&logoColor=white)
-![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-CI-2088FF?logo=githubactions&logoColor=white)
+[![ci](https://github.com/Mazhine/nyc-taxi-lakehouse/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Mazhine/nyc-taxi-lakehouse/actions/workflows/ci.yml)
 
 An end-to-end, local data platform built on an open-source lakehouse stack:
 **MinIO** object storage, an **Apache Iceberg** REST catalog (**Lakekeeper**),
@@ -21,6 +21,13 @@ below is produced by a real run saved under `experiments/`.
 
 > Honesty rule: anything not measured is marked **TBD** or **not tested**, and
 > every design trade-off is written down in `docs/DECISIONS.md`.
+
+## Key results
+
+- **20.0 M trips** queryable in Iceberg/Trino — 20,015,099 trusted rows from 20,332,093 input rows.
+- **1.56 % quarantined with a reason** (316,994 rows) — never silently dropped or mixed into the trusted table.
+- **Rebuild verified 8/8** by `scripts/verify.ps1` after a full `down` → `up` → reload (20,015,099 rows).
+- **5 Argo CD applications** `Synced` / `Healthy` from this GitHub repository (evidence in `experiments/`).
 
 ## Demo
 
@@ -228,7 +235,7 @@ Engines: Spark 3.5.9 (2 exec × 3 Go, row-based Iceberg reads), Trino 483
 | 6 | Full build (CTAS 2024-01, 2.93 M rows) | — | 21.6 s | `phase7_full_vs_incremental.json` |
 | 7 | Incremental append (INSERT 2024-02, 2.97 M rows) | — | 16.2 s | `phase7_full_vs_incremental.json` |
 | 8 | Schema evolution (ADD + RENAME COLUMN) | 27 files | 27 files (no rewrite) | `phase7_report.json` |
-| 9 | Time travel / rollback | 4,931 rows at oldest snapshot | rollback 4,931 → restore 20,015,099 | `phase7_report.json` |
+| 9 | Time travel / rollback | 4,931 rows at oldest snapshot (5,000-row smoke test) | rollback 4,931 → restore 20,015,099 | `phase7_report.json` |
 | 10 | Expire snapshots (1 h demo retention) | 8 snapshots | 1 snapshot (2.5 s) | `phase7_expire.json` |
 | 11 | GX trusted sample (200 k rows, 7 expectations) | — | 100 % pass | `phase6_quality.json` |
 | 12 | GX quarantine sample (20 k rows, negative control) | — | fails as expected (`fare_amount`, `total_amount`) | `phase6_quality.json` |
@@ -237,7 +244,10 @@ Engines: Spark 3.5.9 (2 exec × 3 Go, row-based Iceberg reads), Trino 483
 
 Caveats: Trino and Spark read the same table but are different engines (times
 not comparable across engines); "before" stdev is inflated by cold caches;
-full-vs-incremental slices differ by month (sizes within 1.5 %).
+full-vs-incremental slices differ by month (sizes within 1.5 %). The 4,931-row
+oldest snapshot is the initial 5,000-row smoke-test ingest of 2024-01
+(`--limit 5000`), not a month: it is the first entry in that table history. The
+clean six-month rebuild starts at 2,927,000 rows (`phase5_04_snapshots.json`).
 
 ### Why rows are quarantined
 
